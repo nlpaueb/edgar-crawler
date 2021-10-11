@@ -26,14 +26,14 @@ except ImportError:  # Python 3.5+
 	class HTMLParseError(Exception):
 		pass
 
-from data import DATASET_DIR, LOGGING_DIR
+from __init__ import DATASET_DIR, LOGGING_DIR
 
 urllib3_log = logging.getLogger("urllib3")
 urllib3_log.setLevel(logging.CRITICAL)
 
 # Instantiate a logger object
 LOGGER = Logger(name=os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]).get_logger()
-LOGGER.info(f'Saving log to {os.path.join(LOGGING_DIR, LOGGER.filename)}\n')
+LOGGER.info(f'Saving log to {os.path.join(LOGGING_DIR)}\n')
 
 cli = click.Group()
 
@@ -42,18 +42,18 @@ cli = click.Group()
 @click.option('--start_year', default=2021)
 @click.option('--end_year', default=2021)
 @click.option('--quarters', default=[1, 2, 3, 4])
-@click.option('--user_agent', default='Your name (your email)')	 # 'My User Agent 1.0', 'Mozilla/5.0'
-@click.option('--download_folder', default='DOWNLOADED_FILINGS_2021')
+@click.option('--user_agent', default='Your name (your email)')
+@click.option('--raw_filings_folder', default='RAW_FILINGS')
 @click.option('--indices_folder', default='INDICES')
-@click.option('--filings_csv_filepath', default='DOWNLOADED_FILINGS_2021.csv')
+@click.option('--filings_csv_filepath', default='FILINGS.csv')
 @click.option('--skip_present_indices', default=True)
-@click.option('--cik_tickers', default=[]) 	# ['AAPL', 'GOOG', '789019', 1018724, '1550120']
+@click.option('--cik_tickers', default=['AAPL', 'GOOG', '789019', 1018724, '1550120']) 	# e.g. ['AAPL', 'GOOG', '789019', 1018724, '1550120']
 def main(
 		start_year,
 		end_year,
 		quarters,
 		user_agent,
-		download_folder,
+		raw_filings_folder,
 		indices_folder,
 		filings_csv_filepath,
 		skip_present_indices,
@@ -65,7 +65,7 @@ def main(
 	:param end_year: until which year you want to download filings
 	:param quarters: the quarters that you want to download filings
 	:param user_agent: the User-agent that will be declared to SEC EDGAR
-	:param download_folder: the folder where downloaded filings will be saved
+	:param raw_filings_folder: the folder where the raw filings will be saved
 	:param indices_folder: the folder where the edgar indices will be saved
 	:param filings_csv_filepath: CSV filename to save metadata
 	:param skip_present_indices: whether to skip already present indices or download them again
@@ -73,15 +73,15 @@ def main(
 						In case of file provide each CIK or Ticker in a different line.
 	"""
 
-	download_folder = os.path.join(DATASET_DIR, download_folder)
+	raw_filings_folder = os.path.join(DATASET_DIR, raw_filings_folder)
 	indices_folder = os.path.join(DATASET_DIR, indices_folder)
 	filings_csv_filepath = os.path.join(DATASET_DIR, filings_csv_filepath)
 
 	# If the indices and/or download folder doesn't exist, create them
 	if not os.path.isdir(indices_folder):
 		os.mkdir(indices_folder)
-	if not os.path.isdir(download_folder):
-		os.mkdir(download_folder)
+	if not os.path.isdir(raw_filings_folder):
+		os.mkdir(raw_filings_folder)
 
 	if not os.path.isfile(os.path.join(DATASET_DIR, 'company_info.json')):
 		with open(os.path.join(DATASET_DIR, 'company_info.json'), 'w') as f:
@@ -112,12 +112,12 @@ def main(
 	if os.path.exists(filings_csv_filepath):
 		old_df = pd.read_csv(filings_csv_filepath, dtype=str)
 		series_to_download = []
-		LOGGER.info(f'Reading filings metadata...')
+		LOGGER.info(f'\nReading filings metadata...\n')
 		for _, series in tqdm(df.iterrows(), total=len(df), ncols=100):
 			if len(old_df[old_df['html_index'] == series['html_index']]) == 0:
 				series_to_download.append((series.to_frame()).T)
 		if len(series_to_download) == 0:
-			LOGGER.info(f'There are no more filings to download for the given years, quarters and companies')
+			LOGGER.info(f'\nThere are no more filings to download for the given years, quarters and companies')
 			exit()
 		df = pd.concat(series_to_download) if (len(series_to_download) > 1) else series_to_download[0]
 
@@ -126,18 +126,18 @@ def main(
 	for i in range(len(df)):
 		list_of_series.append(df.iloc[i])
 
-	LOGGER.info(f'Start downloading {len(df)} filings...')
+	LOGGER.info(f'\nDownloading {len(df)} filings...\n')
 
 	final_series = []
 	for series in tqdm(list_of_series, ncols=100):
-		series = crawl(series=series, download_folder=download_folder)
+		series = crawl(series=series, raw_filings_folder=raw_filings_folder, user_agent=user_agent)
 		if series is not None:
 			final_series.append((series.to_frame()).T)
 			final_df = pd.concat(final_series) if (len(final_series) > 1) else final_series[0]
 			final_df = pd.concat([old_df, final_df])
 			final_df.to_csv(filings_csv_filepath, index=False, header=True)
 
-	LOGGER.info(f'Final dataframe exported to {filings_csv_filepath}')
+	LOGGER.info(f'\nFinal dataframe exported to {filings_csv_filepath}')
 
 
 def download_indices(
@@ -158,7 +158,7 @@ def download_indices(
 
 	first_iteration = True
 	while True:
-		retry = False
+		failed_indices = []
 		for year in range(start_year, end_year + 1):
 			for quarter in quarters:
 				if year == datetime.now().year and quarter > math.ceil(datetime.now().month / 3):
@@ -179,7 +179,7 @@ def download_indices(
 						).get(url=url, headers={'User-agent': user_agent})
 					except requests.exceptions.RetryError as e:
 						LOGGER.info(f'Failed downloading "{index_filename}" - {e}')
-						retry = True
+						failed_indices.append(index_filename)
 						continue
 
 					tmp.write(request.content)
@@ -192,8 +192,13 @@ def download_indices(
 						LOGGER.info(f'{index_filename} downloaded')
 
 		first_iteration = False
-		if retry:
-			LOGGER.info(f'Retry downloading failed files')
+		if len(failed_indices) > 0:
+			LOGGER.info(f'Could not download the following indices:\n{failed_indices}')
+			user_input = input('Retry (Y/N): ')
+			if user_input in ['Y', 'y', 'yes']:
+				LOGGER.info(f'Retry downloading failed indices')
+			else:
+				break
 		else:
 			break
 
@@ -281,13 +286,13 @@ def get_specific_indices(
 
 def crawl(
 		series,
-		download_folder,
+		raw_filings_folder,
 		user_agent
 ):
 	"""
 	Crawls the EDGAR HTML indexes
 	:param series: A single series with info for 10K reports
-	:param download_folder: Download folder path
+	:param raw_filings_folder: Raw filings folder path
 	:param user_agent: the User-agent that will be declared to SEC EDGAR
 	:return: the .htm or .txt files
 	"""
@@ -465,8 +470,6 @@ def crawl(
 			if htm_file_link is not None:
 				# In case of iXBRL documents, a slight URL modification is required
 				if 'ix?doc=/' in htm_file_link:
-					# TODO: Check if there are XBRL filings in .html
-					# Last time I checked, they were always converted to .htm
 					link_to_download = htm_file_link.replace('ix?doc=/', '')
 					series['htm_file_link'] = link_to_download
 					file_extension = "htm"
@@ -480,14 +483,14 @@ def crawl(
 
 			if link_to_download is not None:
 				filing_type = re.sub(r"[\-/\\]", '', filing_type)
-				accession_num = link_to_download.split(os.sep)[-2]
+				accession_num = series['complete_text_file_link'].split(os.sep)[-1].split('.')[0]
 				filename = f"{str(series['CIK'])}_{filing_type}_{period_of_report[:4]}_{accession_num}.{file_extension}"
 
 				# Download the file
 				success = download(
 					url=link_to_download,
 					filename=filename,
-					download_folder=download_folder,
+					download_folder=raw_filings_folder,
 					user_agent=user_agent
 				)
 				if success:

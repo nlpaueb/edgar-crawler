@@ -1,0 +1,8 @@
+beautifulsoup4==4.8.2
+click==7.0
+cssutils==1.0.2
+lxml==4.5.0
+pandas==1.0.0
+requests==2.22.0
+tqdm==4.42.1
+pathos==0.2.5

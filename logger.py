@@ -1,7 +1,7 @@
 import os
 import logging
 from time import strftime, gmtime
-from data import LOGGING_DIR
+from __init__ import LOGGING_DIR
 
 
 class Logger:

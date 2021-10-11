@@ -24,16 +24,19 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
 - To download annual reports from EDGAR, run `python edgar_crawler.py` with the following arguments:
   - `--start_year XXXX`: the year range to start from
   - `--end_year YYYY`: the year range to end to
-  - `--cik` (Optional): a given Company Index Key (CIK) for a specific company. Alternatively, for multiple specific companies, you can specify an absolute filepath to an .CSV file containing each CIK in the first column of each row.
+  - `--quarters [1, 2, 3, 4]`: the quarters that you want to download filings from (List)
+  - `--user_agent`: the User-agent that will be declared to SEC EDGAR
+  - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. <br>
+    In case of file provide each CIK or Ticker in a different line. e.g. ['AAPL', 'GOOG', '789019', 1018724, '1550120'] <br>
   If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
-  - `--download_folder` (Optional): the name of the folder where downloaded documents will be stored. Default value is `'DOWNLOADED_FILINGS'`.
-  - `--indices_folder` (Optional): the name of the folder where EDGAR .idx files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
-  - `--num_threads` (Optional): the number of threads for multi-processing. Default is `2`.  
+  - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored. Default value is `'RAW_FILINGS'`.
+  - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
+  - `--filings_csv_filepath` (Optional): CSV filename to save metadata. e.g 'filename', 'CIK', 'year'
 - To clean and extract specific item sections from the already-downloaded documents, run `python extract_items.py` with the following arguments: 
-  - `--download_folder`: the name of the folder where documents are stored. Default is `'DOWNLOADED_FILINGS'`.
-  - `--extraction_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
-  - `--items`: a list with the certain item sections to extract. The default list contains all item sections.
-  - `--num_threads` (Optional): the number of threads for multi-processing. Default is `2`.
+  - `--raw_filings_folder`: the name of the folder where documents are stored. Default is `'RAW_FILINGS'`.
+  - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
+  - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items<br>
+    The default list contains all item sections.
 
 ## Citation
 If this work inspires you in any way, please consider citing the relevant paper, published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic & Online):

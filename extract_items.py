@@ -3,17 +3,18 @@ import cssutils
 import json
 import logging
 import os
-import random
 import re
 import sys
 
 from bs4 import BeautifulSoup
 from html.parser import HTMLParser
-from multiprocessing import cpu_count
 from pathos.multiprocessing import ProcessPool
 from tqdm import tqdm
+from typing import List
 
 from logger import Logger
+
+from __init__ import DATASET_DIR
 
 # Change the default recursion limit of 1000 to 30000
 sys.setrecursionlimit(30000)
@@ -55,6 +56,7 @@ class HtmlStripper(HTMLParser):
 class ExtractItems:
     def __init__(
             self,
+            items_to_extract: List,
             raw_files_folder: str,
             extracted_files_folder: str
     ):
@@ -62,7 +64,8 @@ class ExtractItems:
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
 
-        self.item_list = ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15']
+        self.items_list = ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15']
+        self.items_to_extract = items_to_extract
 
     @staticmethod
     def strip_html(html_content):
@@ -75,6 +78,7 @@ class ExtractItems:
         # TODO: Check if flags are required in the following regex
         html_content = re.sub(r'(<\s*/\s*(div|tr|p|li|)\s*>)', r'\1\n\n', html_content)
         html_content = re.sub(r'(<br\s*>|<br\s*/>)', r'\1\n\n', html_content)
+        html_content = re.sub(r'(<\s*/\s*(th|td)\s*>)', r' \1 ', html_content)
         html_content = HtmlStripper().strip_tags(html_content)
 
         return html_content
@@ -186,9 +190,6 @@ class ExtractItems:
 
         # Detect tables that have numerical data
         for tbl in tables:
-            table_text = tbl.text
-            nonblank_digits_percentage, spaces_percentage = ExtractItems.calculate_table_character_percentages(table_text)
-
             trs = tbl.find_all('tr', attrs={'style': True}) + \
                   tbl.find_all('td', attrs={'style': True}) + \
                   tbl.find_all('th', attrs={'style': True})
@@ -215,15 +216,8 @@ class ExtractItems:
                     bgcolor_found = True
                     break
 
-            if nonblank_digits_percentage <= 0.05 and spaces_percentage <= 0.35:
-                if bgcolor_found or background_found:
-                    tbl.decompose()
-            else:
-                if bgcolor_found or background_found \
-                        or tbl.find_all('tr', attrs={'colspan': True}) or tbl.find_all('td', attrs={'colspan': True}) \
-                        or tbl.find_all('th', attrs={'colspan': True}) or tbl.find_all('tr', attrs={'nowrap': True}) \
-                        or tbl.find_all('td', attrs={'nowrap': True}) or tbl.find_all('th', attrs={'nowrap': True}):
-                    tbl.decompose()
+            if bgcolor_found or background_found:
+                tbl.decompose()
 
         return doc_10k
 
@@ -276,7 +270,7 @@ class ExtractItems:
 
         # If item is the last one (usual case when dealing with EDGAR's old .txt files), get all the text from its beginning until EOF.
         if positions:
-            if item_index in self.item_list and item_section == '':
+            if item_index in self.items_list and item_section == '':
                 item_section = ExtractItems.get_last_item_section(item_index, text, positions)
             elif item_index == '15':  # Item 15 is the last one, get all the text from its beginning until EOF
                 item_section = ExtractItems.get_last_item_section(item_index, text, positions)
@@ -317,9 +311,9 @@ class ExtractItems:
         if max_match:
             if positions:
                 if max_match_offset + max_match.start() >= positions[-1]:
-                    item_section = text[max_match_offset + max_match.start(): max_match_offset + max_match.end()]
+                    item_section = text[max_match_offset + max_match.start(): max_match_offset + max_match.regs[1][0]]
             else:
-                item_section = text[max_match_offset + max_match.start(): max_match_offset + max_match.end()]
+                item_section = text[max_match_offset + max_match.start(): max_match_offset + max_match.regs[1][0]]
             positions.append(max_match_offset + max_match.end() - len(max_match[1]) - 1)
 
         return item_section, positions
@@ -397,10 +391,14 @@ class ExtractItems:
 
         splits = form10k_file.split('.')[:-1][0].split('_')
 
-        json_content = {'filename': form10k_file,
-                        'cik': splits[0],
-                        'year': splits[1]}
-        for item_index in self.item_list:
+        json_content = {
+            'filename': form10k_file,
+            'cik': splits[0],
+            'filing_type': splits[1],
+            'year': splits[2],
+            'accession_number': splits[3]
+        }
+        for item_index in self.items_to_extract:
             json_content[f'section_{item_index}'] = ''
 
         text = ExtractItems.strip_html(str(doc_10k))
@@ -408,41 +406,15 @@ class ExtractItems:
 
         positions = []
         all_sections_null = True
-        # TODO: Check if all section are not applicable or None
-        # e.g.
-        """
-        "filename": "1260125_2004.htm",
-        "cik": "1260125",
-        "year": "2004",
-        "section_1": "Item 1. Business\nNot applicable, in reliance on the letter relief granted by the staff of the SEC to other companies in similar circumstances (collectively, the \u201cRelief Letters\u201d).\nItem 2.",
-        "section_1A": "",
-        "section_1B": "",
-        "section_2": "Item 2. Properties\nNot applicable in reliance on the Relief Letters.\nItem 3.",
-        "section_3": "Item 3. Legal Proceedings\nNone.\nItem 4.",
-        "section_4": "Item 4. Submission of Matters to a Vote of Security Holders\nNone.\nPART II\nItem 5.",
-        "section_5": "Item 5. Market for Registrant\u2019s Common Equity and Related Stockholder Matters\nNot applicable.\nItem 6.",
-        "section_6": "Item 6. Selected Financial Data\nNot applicable in reliance on the Relief Letters.\nItem 7.",
-        "section_7": "Item 7. Management's Discussion and Analysis of Financial Condition and Results of Operations\nNot applicable in reliance on the Relief Letters.\nItem 7A.",
-        "section_7A": "Item 7A. Quantitative and Qualitative Disclosures About Market Risk\nNot applicable in reliance on the Relief Letters.\nItem 8.",
-        "section_8": "Item 8. Financial Statements and Supplementary Data\nNot applicable in reliance on the Relief Letters.\nItem 9.",
-        "section_9": "Item 9. Changes in and Disagreements with Accountants on Accounting and Financial Disclosure\nNone.\nItem 9A.",
-        "section_9A": "Item 9A. Controls and Procedures\nNot applicable.\nItem 9B.",
-        "section_9B": "Item 9B. Other Information\nNone.\nPART III\nItem 10.",
-        "section_10": "Item 10. Directors and Executive Officers of the Registrant\nNot applicable in reliance on the Relief Letters.\nItem 11.",
-        "section_11": "Item 11. Executive Compensation\nNot applicable.\nItem 12.",
-        "section_12": "Item 12. Security Ownership of Certain Beneficial Owners and Management and Related Stockholder Matters\nNot applicable.\nItem 13.",
-        "section_13": "Item 13. Certain Relationships and Related Transactions\nNone.\nItem 14.",
-        "section_14": "Item 14. Principal Accounting Fees and Services\nNot applicable.\nPART IV\nItem 15.",
-        "section_15": "Item 15. Exhibits, Financial Statement Schedules, and Reports on Form 8-K\n(a) (1) Not applicable.\n(2) Not applicable.\n(3) Exhibits:\n(b) Current Reports on Form 8-K during the year ended December 31, 2004.\n(c) Exhibits to this report are listed in Item 15(a)(3) above.\n(d) Not applicable.\nSIGNATURE\nPursuant to the requirements of the Securities Exchange Act of 1934, the Registrant has duly caused this report to be signed on its behalf by the undersigned hereunto duly authorized.\nDated: March 29, 2005\nHYUNDAI ABS FUNDING CORPORATION\nBy: Hyundai Motor Finance Company, as Servicer\nBy: /s/ David A. Hoeller\nName: David A. Hoeller\nTitle: Vice President, Finance\nEXHIBIT INDEX"
-        """
-        for i, item_index in enumerate(self.item_list):
-            next_item_list = self.item_list[i+1:]
+        for i, item_index in enumerate(self.items_list):
+            next_item_list = self.items_list[i+1:]
             item_section, positions = self.parse_item(text, item_index, next_item_list, positions)
             item_section = ExtractItems.remove_multiple_lines(item_section)
 
-            if item_section != '':
-                all_sections_null = False
-            json_content[f'section_{item_index}'] = item_section
+            if item_index in self.items_to_extract:
+                if item_section != '':
+                    all_sections_null = False
+                json_content[f'section_{item_index}'] = item_section
 
         if all_sections_null:
             json_content = None
@@ -451,10 +423,10 @@ class ExtractItems:
         return json_content
 
     def process_filing(self, form10k_file):
-        json_filename = f'{form10k_file.split(".")[:-1][0]}.json'
+        json_filename = f'{form10k_file.split(".")[0]}.json'
         absolute_json_filename = os.path.join(self.extracted_files_folder, json_filename)
         if os.path.exists(absolute_json_filename):
-            return
+            return 0
 
         json_content = self.extract_items(form10k_file)
 
@@ -462,54 +434,51 @@ class ExtractItems:
             with open(absolute_json_filename, 'w') as filepath:
                 json.dump(json_content, filepath, indent=4)
 
-        return
+        return 1
 
 
 @cli.command()
-@click.option('--raw_files_folder', default='data/datasets/DOWNLOADED_FILINGS_2021')
-@click.option('--extracted_files_folder', default='data/datasets/CLEAN_EXTRACTED_ITEMS_2021')
-@click.option('--num_threads', default=1)
+@click.option('--raw_filings_folder', default='RAW_FILINGS')
+@click.option('--extracted_filings_folder', default='EXTRACTED_FILINGS')
+@click.option('--items_to_extract', default=['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A',
+                                             '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15'])
 def main(
-    raw_files_folder: str,
-    extracted_files_folder: str,
-    num_threads: int
+    raw_filings_folder: str,
+    extracted_filings_folder: str,
+    items_to_extract: List
 ):
     """
     Gets the list of 10K files and extracts all textual items/sections by calling the extract_items() function
     """
 
-    raw_files_folder = os.path.abspath(raw_files_folder)
-    extracted_files_folder = os.path.abspath(extracted_files_folder)
+    raw_filings_folder = os.path.join(DATASET_DIR, raw_filings_folder)
+    if not os.path.isdir(raw_filings_folder):
+        LOGGER.info(f'No such directory: "{raw_filings_folder}')
+        exit()
 
-    if not os.path.isdir(extracted_files_folder):
-        os.mkdir(extracted_files_folder)
+    extracted_filings_folder = os.path.join(DATASET_DIR, extracted_filings_folder)
+
+    if not os.path.isdir(extracted_filings_folder):
+        os.mkdir(extracted_filings_folder)
 
     extraction = ExtractItems(
-        raw_files_folder=raw_files_folder,
-        extracted_files_folder=extracted_files_folder
+        items_to_extract=items_to_extract,
+        raw_files_folder=raw_filings_folder,
+        extracted_files_folder=extracted_filings_folder
     )
 
     # Get list of 10K files
-    list_of_files = [form10k_file for form10k_file in os.listdir(raw_files_folder)
+    list_of_files = [form10k_file for form10k_file in os.listdir(raw_filings_folder)
                      if form10k_file.endswith('.txt') or form10k_file.endswith('.htm') or form10k_file.endswith('.html')]
 
-    random.shuffle(list_of_files)
+    LOGGER.info(f'Starting extraction...\n')
 
-    if num_threads <= 0:
-        num_threads = cpu_count()
+    with ProcessPool(processes=1) as pool:
+        processed = list(tqdm(pool.imap(extraction.process_filing, list_of_files), total=len(list_of_files), ncols=100))
 
-    LOGGER.info(f'Starting extraction.')
-
-    for _, _ in tqdm(
-            enumerate(ProcessPool(processes=num_threads).imap(extraction.process_filing, list_of_files)),
-            total=len(list_of_files),
-            ncols=100
-    ):
-        pass
-
-    LOGGER.info(f'\n{150*"*"}')
-    LOGGER.info(f'Item extraction is completed successfully.')
-    LOGGER.info(f'Extracted files are saved under directory: {extracted_files_folder}')
+    LOGGER.info(f'\nItem extraction is completed successfully.')
+    LOGGER.info(f'{sum(processed)} files were processed.')
+    LOGGER.info(f'Extracted filings are saved to: {extracted_filings_folder}')
 
 
 if __name__ == '__main__':
