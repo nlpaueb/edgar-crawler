@@ -32,6 +32,7 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
   - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored. Default value is `'RAW_FILINGS'`.
   - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
   - `--filings_csv_filepath` (Optional): CSV filename to save metadata. e.g 'filename', 'CIK', 'year'
+  - `--skip_present_indices`: Whether to skip already downloaded EDGAR indices or download them nonetheless 
 - To clean and extract specific item sections from the already-downloaded documents, run `python extract_items.py` with the following arguments: 
   - `--raw_filings_folder`: the name of the folder where documents are stored. Default is `'RAW_FILINGS'`.
   - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.

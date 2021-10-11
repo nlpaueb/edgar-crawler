@@ -6,3 +6,4 @@ pandas==1.0.0
 requests==2.22.0
 tqdm==4.42.1
 pathos==0.2.5
+urllib3==1.25.8

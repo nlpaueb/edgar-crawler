@@ -42,40 +42,47 @@ cli = click.Group()
 @click.option('--start_year', default=2021)
 @click.option('--end_year', default=2021)
 @click.option('--quarters', default=[1, 2, 3, 4])
+@click.option('--filing_types', default=['10-K', '10-K405', '10-KT'])
+@click.option('--cik_tickers', default=[])
 @click.option('--user_agent', default='Your name (your email)')
 @click.option('--raw_filings_folder', default='RAW_FILINGS')
 @click.option('--indices_folder', default='INDICES')
-@click.option('--filings_csv_filepath', default='FILINGS.csv')
+@click.option('--filings_csv_file', default='FILINGS.csv')
 @click.option('--skip_present_indices', default=True)
-@click.option('--cik_tickers', default=['AAPL', 'GOOG', '789019', 1018724, '1550120']) 	# e.g. ['AAPL', 'GOOG', '789019', 1018724, '1550120']
 def main(
 		start_year,
 		end_year,
 		quarters,
+		filing_types,
+		cik_tickers,
 		user_agent,
 		raw_filings_folder,
 		indices_folder,
-		filings_csv_filepath,
-		skip_present_indices,
-		cik_tickers
+		filings_csv_file,
+		skip_present_indices
 ):
 	"""
 	The main method iterates all over the tsv index files that are generated and calls a crawler method for each one of them
 	:param start_year: the year that you want to start downloading filings from
 	:param end_year: until which year you want to download filings
 	:param quarters: the quarters that you want to download filings
+	:param filing_types: list of filing types to download. e.g. ['10-K', '10-K405', '10-KT']
+	:param cik_tickers: list or path of file containing CIKs or Tickers.
+						In case of file provide each CIK or Ticker in a different line.
 	:param user_agent: the User-agent that will be declared to SEC EDGAR
 	:param raw_filings_folder: the folder where the raw filings will be saved
 	:param indices_folder: the folder where the edgar indices will be saved
-	:param filings_csv_filepath: CSV filename to save metadata
+	:param filings_csv_file: CSV filename to save metadata
 	:param skip_present_indices: whether to skip already present indices or download them again
-	:param cik_tickers: list or path of file containing CIKs or Tickers.
-						In case of file provide each CIK or Ticker in a different line.
 	"""
 
 	raw_filings_folder = os.path.join(DATASET_DIR, raw_filings_folder)
 	indices_folder = os.path.join(DATASET_DIR, indices_folder)
-	filings_csv_filepath = os.path.join(DATASET_DIR, filings_csv_filepath)
+	filings_csv_filepath = os.path.join(DATASET_DIR, filings_csv_file)
+
+	if len(filing_types) == 0:
+		LOGGER.info(f'Please provide at least one filing type')
+		exit()
 
 	# If the indices and/or download folder doesn't exist, create them
 	if not os.path.isdir(indices_folder):
@@ -106,7 +113,12 @@ def main(
 				tsv_filenames.append(filepath)
 
 	# Get the indices that are specific to your needs
-	df = get_specific_indices(tsv_filenames=tsv_filenames, cik_tickers=cik_tickers, user_agent=user_agent)
+	df = get_specific_indices(
+		tsv_filenames=tsv_filenames,
+		filing_types=filing_types,
+		cik_tickers=cik_tickers,
+		user_agent=user_agent
+	)
 
 	old_df = None
 	if os.path.exists(filings_csv_filepath):
@@ -130,7 +142,12 @@ def main(
 
 	final_series = []
 	for series in tqdm(list_of_series, ncols=100):
-		series = crawl(series=series, raw_filings_folder=raw_filings_folder, user_agent=user_agent)
+		series = crawl(
+			series=series,
+			filing_types=filing_types,
+			raw_filings_folder=raw_filings_folder,
+			user_agent=user_agent
+		)
 		if series is not None:
 			final_series.append((series.to_frame()).T)
 			final_df = pd.concat(final_series) if (len(final_series) > 1) else final_series[0]
@@ -166,7 +183,7 @@ def download_indices(
 				index_filename = f'{year}_QTR{quarter}.tsv'
 				if skip_present_indices and os.path.exists(os.path.join(indices_folder, index_filename)):
 					if first_iteration:
-						LOGGER.info(f'Skipping "{index_filename}"')
+						LOGGER.info(f'Skipping {index_filename}')
 					continue
 
 				url = f'{base_url}/{year}/QTR{quarter}/master.zip'
@@ -205,15 +222,17 @@ def download_indices(
 
 def get_specific_indices(
 		tsv_filenames,
+		filing_types,
 		user_agent,
 		cik_tickers=None,
 ):
 	"""
-	Loops through all the indexes and keeps only the rows/Series for the 10-K filings
+	Loops through all the indexes and keeps only the rows/Series for the specific filing types
 	:param tsv_filenames: the indices filenames
+	:param filing_types: list of filing types to download. e.g. ['10-K', '10-K405', '10-KT']
 	:param user_agent: the User-agent that will be declared to SEC EDGAR
 	:param cik_tickers: list of CIKs or Tickers
-	:return: a final dataframe which has Series only for 10-K indexes
+	:return: a final dataframe which has Series only for the specific indices
 	"""
 
 	ciks = []
@@ -222,7 +241,7 @@ def get_specific_indices(
 		if isinstance(cik_tickers, str):
 			if os.path.exists(cik_tickers) and os.path.isfile(cik_tickers):
 				with open(cik_tickers) as f:
-					cik_tickers = [l.strip() for l in f.readlines() if l.strip() != '']
+					cik_tickers = [line.strip() for line in f.readlines() if line.strip() != '']
 			else:
 				LOGGER.debug(f'Please provide a valid cik_ticker file path')
 				exit()
@@ -236,7 +255,7 @@ def get_specific_indices(
 				retries=5, backoff_factor=0.2, session=session
 			).get(url=company_tickers_url, headers={'User-agent': user_agent})
 		except (RequestException, HTTPError, ConnectionError, Timeout, RetryError) as err:
-			print(f'Failed downloading "{company_tickers_url}" - {err}')
+			LOGGER.info(f'Failed downloading "{company_tickers_url}" - {err}')
 			exit()
 
 		company_tickers = json.loads(request.content)
@@ -273,7 +292,7 @@ def get_specific_indices(
 		df['html_index'] = 'https://www.sec.gov/Archives/' + df['html_index'].astype(str)
 
 		# Filter by filing type
-		df = df[df.Type.isin(['10-K', '10-K405', '10-KT'])]
+		df = df[df.Type.isin(filing_types)]
 
 		# Filter by CIK
 		if len(ciks):
@@ -285,13 +304,15 @@ def get_specific_indices(
 
 
 def crawl(
+		filing_types,
 		series,
 		raw_filings_folder,
 		user_agent
 ):
 	"""
 	Crawls the EDGAR HTML indexes
-	:param series: A single series with info for 10K reports
+	Lparam filing_types: list of filing types to download
+	:param series: A single series with info for specific filings
 	:param raw_filings_folder: Raw filings folder path
 	:param user_agent: the User-agent that will be declared to SEC EDGAR
 	:return: the .htm or .txt files
@@ -452,17 +473,17 @@ def crawl(
 			filing_type = None
 
 			for tr in table.find_all('tr')[1:]:
-				# If it's the 10-K document type
-				if tr.contents[7].text in ['10-K', '10-K405', '10-KT']:
+				# If it's the specific document type (e.g. 10-K)
+				if tr.contents[7].text in filing_types:
 					filing_type = tr.contents[7].text
 					if tr.contents[5].contents[0].attrs['href'].split('.')[-1] in ['htm', 'html']:
 						htm_file_link = 'https://www.sec.gov' + tr.contents[5].contents[0].attrs['href']
 						series['htm_file_link'] = str(htm_file_link)
 						break
 
-				# Get the txt file
+				# Else get the complete submission text file
 				elif tr.contents[3].text == 'Complete submission text file':
-					filing_type = '10-K'
+					filing_type = series['Type']
 					complete_text_file_link = 'https://www.sec.gov' + tr.contents[5].contents[0].attrs['href']
 					series['complete_text_file_link'] = str(complete_text_file_link)
 					break
