@@ -26,8 +26,8 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
   - `--end_year YYYY`: the year range to end to
   - `--quarters` (Optional): the quarters that you want to download filings from (List). Default value is: [1, 2, 3, 4]
   - `--filing_types` (Optional): list of filing types to download. Default value is: ['10-K', '10-K405', '10-KT']
-  - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. <br>
-    In case of file, provide each CIK or Ticker in a different line. e.g. ['AAPL', 'GOOG', '789019', 1018724, '1550120'] <br>
+  - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. ['AAPL', 'GOOG', '789019', 1018724, '1550120'] <br>
+    In case of file, provide each CIK or Ticker in a different line.  <br>
   If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
   - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR
   - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored. Default value is `'RAW_FILINGS'`.
