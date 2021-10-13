@@ -1,11 +1,11 @@
 # EDGAR-CRAWLER
 Crawl and fetch all publicly-traded companies annual reports from [SEC's EDGAR](https://www.sec.gov/edgar.shtml) database.
 
-`edgar-crawler` is a an optimized toolkit that retrieves textual information from financial reports, such as 10-K, 10-Q or 8-K filings.
+`edgar-crawler` is an optimized toolkit that retrieves textual information from financial reports, such as 10-K, 10-Q or 8-K filings.
 
 More specifically, it can:
-- Crawl and download financial reports for each publicly-traded company, for specified years 
-- Extract and clean specific text sections, such as Risk Factors, MD&A, and others. **Currently, we only support extraction of 10-K filings (i.e., annual reports).**
+- Crawl and download financial reports for each publicly-traded company, for specified years, through the `edgar_crawler.py` module.
+- Extract and clean specific text sections, such as Risk Factors, MD&A, and others, through the `extract_items.py` module. **Currently, we only support extraction of 10-K filings (i.e., annual reports).**
 
 The toolkit's purpose is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management.
 
@@ -17,30 +17,32 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
 - [License](#license)
 
 ## Install
-- Before starting, ideally, it's recommended to switch to a virtual environment first via `conda` or `virtualenv` or Python's `venv` module.
+- Before starting, ideally, it's recommended to switch to a virtual environment first via `conda`, using Python 3.6+.
 - Install dependencies via `pip install -r requirements.txt`
 
 ## Usage
-- To download financial reports from EDGAR, run `python edgar_crawler.py` with the following arguments:
-  - `--start_year XXXX`: the year range to start from
-  - `--end_year YYYY`: the year range to end to
-  - `--quarters` (Optional): the quarters that you want to download filings from (List). Default value is: [1, 2, 3, 4]
-  - `--filing_types` (Optional): list of filing types to download. Default value is: ['10-K', '10-K405', '10-KT']
-  - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. ['AAPL', 'GOOG', '789019', 1018724, '1550120'] <br>
-    In case of file, provide each CIK or Ticker in a different line.  <br>
-  If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
-  - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR
-  - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored. Default value is `'RAW_FILINGS'`.
-  - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
-  - `--filings_csv_filepath` (Optional): CSV filename to save metadata from the reports. e.g 'filename', 'CIK', 'year'
-  - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless. Default value is `True`.
+- Before running any script, you can edit the `config.json` file.
+  - Arguments for `edgar_crawler.py`:
+      - `--start_year XXXX`: the year range to start from
+      - `--end_year YYYY`: the year range to end to
+      - `--quarters` (Optional): the quarters that you want to download filings from (List). Default value is: [1, 2, 3, 4]
+      - `--filing_types` (Optional): list of filing types to download. Default value is: ['10-K', '10-K405', '10-KT']
+      - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. [789019, "1018724", "TWTR"] <br>
+        In case of file, provide each CIK or Ticker in a different line.  <br>
+      If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
+      - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR
+      - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored. Default value is `'RAW_FILINGS'`.
+      - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
+      - `--filings_csv_filepath` (Optional): CSV filename to save metadata from the reports. e.g 'filename', 'CIK', 'year'
+      - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless. Default value is `True`.
+  - Arguments for `extract_items.py`:
+    - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored. Default is `'RAW_FILINGS'`.
+    - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
+    - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items<br>
+      The default list contains all item sections.
 
-
-- To clean and extract specific item sections from already-downloaded 10-K documents, run `python extract_items.py` with the following arguments: 
-  - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored. Default is `'RAW_FILINGS'`.
-  - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
-  - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items<br>
-    The default list contains all item sections.
+- To download financial reports from EDGAR, run `python edgar_crawler.py`
+- To clean and extract specific item sections from already-downloaded 10-K documents, run `python extract_items.py`.
   - Reminder: We currently support the extraction of 10-K documents. 
 
 ## Citation
