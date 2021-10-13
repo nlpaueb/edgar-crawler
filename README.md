@@ -13,6 +13,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
 - [Install](#install)
 - [Usage](#usage)
 - [Citation](#citation)
+- [Accompanying Resources](#accompanying-resources)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -57,6 +58,12 @@ If this work inspires you in any way, please consider citing the relevant paper,
       primaryClass={cs.CL}
 }
 ```
+Read the preprint here: [https://arxiv.org/abs/2109.14394](https://arxiv.org/abs/2109.14394)
+
+## Accompanying Resources
+- [corpus] EDGAR-CORPUS: A corpus for financial NLP research, built from SEC's EDGAR - [https://zenodo.org/record/5528490](https://zenodo.org/record/5528490)
+- [word2vec embeddings] Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
+
 ## Contributing
 PRs and contributions are accepted.
  
