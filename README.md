@@ -23,7 +23,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
 
 ## Usage
 - Before running any script, you can edit the `config.json` file.
-  - Arguments for `edgar_crawler.py`:
+  - Arguments for `edgar_crawler.py`, the module to download financial reports:
       - `--start_year XXXX`: the year range to start from
       - `--end_year YYYY`: the year range to end to
       - `--quarters` (Optional): the quarters that you want to download filings from (List).<br> Default value is: `[1, 2, 3, 4]`.
@@ -36,7 +36,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
       - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
       - `--filings_metadata_file` (Optional): CSV filename to save metadata from the reports. e.g 'filename', 'CIK', 'year'
       - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless.<br> Default value is `True`.
-  - Arguments for `extract_items.py`:
+  - Arguments for `extract_items.py`, the module to clean and extract textual data from already-downloaded 10-K reports:
     - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
     - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored.<br> Default value is `'EXTRACTED_FILINGS'`.<br> For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
     - `--items_to_extract`: a list with the certain item sections to extract. e.g. `['7','8']` to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items.<br>
