@@ -34,7 +34,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
       - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR.
       - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored.<br> Default value is `'RAW_FILINGS'`.
       - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
-      - `--filings_csv_filepath` (Optional): CSV filename to save metadata from the reports. e.g 'filename', 'CIK', 'year'
+      - `--filings_metadata_file` (Optional): CSV filename to save metadata from the reports. e.g 'filename', 'CIK', 'year'
       - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless.<br> Default value is `True`.
   - Arguments for `extract_items.py`:
     - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
