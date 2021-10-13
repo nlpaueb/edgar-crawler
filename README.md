@@ -28,7 +28,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
       - `--end_year YYYY`: the year range to end to
       - `--quarters` (Optional): the quarters that you want to download filings from (List).<br> Default value is: `[1, 2, 3, 4]`.
       - `--filing_types` (Optional): list of filing types to download.<br> Default value is: `['10-K', '10-K405', '10-KT']`.
-      - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. `[789019, "1018724", "TWTR"]` <br>
+      - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. `[789019, "1018724", "AAPL", "TWTR"]` <br>
         In case of file, provide each CIK or Ticker in a different line.  <br>
       If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
       - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR.
