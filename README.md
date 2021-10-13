@@ -25,20 +25,20 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
   - Arguments for `edgar_crawler.py`:
       - `--start_year XXXX`: the year range to start from
       - `--end_year YYYY`: the year range to end to
-      - `--quarters` (Optional): the quarters that you want to download filings from (List). Default value is: [1, 2, 3, 4]
-      - `--filing_types` (Optional): list of filing types to download. Default value is: ['10-K', '10-K405', '10-KT']
+      - `--quarters` (Optional): the quarters that you want to download filings from (List).<br> Default value is: [1, 2, 3, 4]
+      - `--filing_types` (Optional): list of filing types to download.<br> Default value is: ['10-K', '10-K405', '10-KT']
       - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. [789019, "1018724", "TWTR"] <br>
         In case of file, provide each CIK or Ticker in a different line.  <br>
       If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
-      - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR
-      - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored. Default value is `'RAW_FILINGS'`.
+      - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR.
+      - `--raw_filings_folder` (Optional): the name of the folder where downloaded filings will be stored.<br> Default value is `'RAW_FILINGS'`.
       - `--indices_folder` (Optional): the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
       - `--filings_csv_filepath` (Optional): CSV filename to save metadata from the reports. e.g 'filename', 'CIK', 'year'
-      - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless. Default value is `True`.
+      - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless.<br> Default value is `True`.
   - Arguments for `extract_items.py`:
-    - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored. Default is `'RAW_FILINGS'`.
-    - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
-    - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items<br>
+    - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
+    - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored.<br> Default value is `'EXTRACTED_FILINGS'`.<br> For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
+    - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items.<br>
       The default list contains all item sections.
 
 - To download financial reports from EDGAR, run `python edgar_crawler.py`
