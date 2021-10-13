@@ -7,7 +7,7 @@ More specifically, it can:
 - Crawl and download financial reports for each publicly-traded company, for specified years, through the `edgar_crawler.py` module.
 - Extract and clean specific text sections, such as Risk Factors, MD&A, and others, through the `extract_items.py` module. **Currently, we only support extraction of 10-K filings (i.e., annual reports).**
 
-The toolkit's purpose is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management.
+The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management.
 
 ## Table of Contents
 - [Install](#install)
@@ -25,9 +25,9 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
   - Arguments for `edgar_crawler.py`:
       - `--start_year XXXX`: the year range to start from
       - `--end_year YYYY`: the year range to end to
-      - `--quarters` (Optional): the quarters that you want to download filings from (List).<br> Default value is: [1, 2, 3, 4]
-      - `--filing_types` (Optional): list of filing types to download.<br> Default value is: ['10-K', '10-K405', '10-KT']
-      - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. [789019, "1018724", "TWTR"] <br>
+      - `--quarters` (Optional): the quarters that you want to download filings from (List).<br> Default value is: `[1, 2, 3, 4]`.
+      - `--filing_types` (Optional): list of filing types to download.<br> Default value is: `['10-K', '10-K405', '10-KT']`.
+      - `--cik_tickers` (Optional): list or path of file containing CIKs or Tickers. e.g. `[789019, "1018724", "TWTR"]` <br>
         In case of file, provide each CIK or Ticker in a different line.  <br>
       If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
       - `--user_agent` (Optional): the User-agent that will be declared to SEC EDGAR.
@@ -38,7 +38,7 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
   - Arguments for `extract_items.py`:
     - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
     - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored.<br> Default value is `'EXTRACTED_FILINGS'`.<br> For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
-    - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items.<br>
+    - `--items_to_extract`: a list with the certain item sections to extract. e.g. `['7','8']` to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items.<br>
       The default list contains all item sections.
 
 - To download financial reports from EDGAR, run `python edgar_crawler.py`
