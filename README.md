@@ -58,7 +58,7 @@ If this work inspires you in any way, please consider citing the relevant paper,
       primaryClass={cs.CL}
 }
 ```
-Read the preprint here: [https://arxiv.org/abs/2109.14394](https://arxiv.org/abs/2109.14394)
+Read the paper here: [https://arxiv.org/abs/2109.14394](https://arxiv.org/abs/2109.14394)
 
 ## Accompanying Resources
 - [corpus] EDGAR-CORPUS: A corpus for financial NLP research, built from SEC's EDGAR - [https://zenodo.org/record/5528490](https://zenodo.org/record/5528490)
