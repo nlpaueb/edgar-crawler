@@ -21,7 +21,7 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
 - Install dependencies via `pip install -r requirements.txt`
 
 ## Usage
-- To download annual reports from EDGAR, run `python edgar_crawler.py` with the following arguments:
+- To download financial reports from EDGAR, run `python edgar_crawler.py` with the following arguments:
   - `--start_year XXXX`: the year range to start from
   - `--end_year YYYY`: the year range to end to
   - `--quarters` (Optional): the quarters that you want to download filings from (List). Default value is: [1, 2, 3, 4]
@@ -36,12 +36,12 @@ The toolkit's purpose is to speed up research and experiments that rely on finan
   - `--skip_present_indices` (Optional): Whether to skip already downloaded EDGAR indices or download them nonetheless. Default value is `True`.
 
 
-- To clean and extract specific item sections from the already-downloaded documents, run `python extract_items.py` with the following arguments: 
+- To clean and extract specific item sections from already-downloaded 10-K documents, run `python extract_items.py` with the following arguments: 
   - `--raw_filings_folder`: the name of the folder where the downloaded documents are stored. Default is `'RAW_FILINGS'`.
   - `--extracted_filings_folder`: the name of the folder where extracted documents will be stored. Default is `'EXTRACTED_FILINGS'`. For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
   - `--items_to_extract`: a list with the certain item sections to extract. e.g. ['7','8'] to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items<br>
     The default list contains all item sections.
-  - Reminder: We currently support the extraction of 10-K documents.
+  - Reminder: We currently support the extraction of 10-K documents. 
 
 ## Citation
 If this work inspires you in any way, please consider citing the relevant paper, published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic & Online):
