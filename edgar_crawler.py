@@ -35,52 +35,21 @@ urllib3_log.setLevel(logging.CRITICAL)
 LOGGER = Logger(name=os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]).get_logger()
 LOGGER.info(f'Saving log to {os.path.join(LOGGING_DIR)}\n')
 
-cli = click.Group()
 
-
-@cli.command()
-@click.option('--start_year', default=2021)
-@click.option('--end_year', default=2021)
-@click.option('--quarters', default=[1, 2, 3, 4])
-@click.option('--filing_types', default=['10-K', '10-K405', '10-KT'])
-@click.option('--cik_tickers', default=[])
-@click.option('--user_agent', default='Your name (your email)')
-@click.option('--raw_filings_folder', default='RAW_FILINGS')
-@click.option('--indices_folder', default='INDICES')
-@click.option('--filings_csv_file', default='FILINGS.csv')
-@click.option('--skip_present_indices', default=True)
-def main(
-		start_year,
-		end_year,
-		quarters,
-		filing_types,
-		cik_tickers,
-		user_agent,
-		raw_filings_folder,
-		indices_folder,
-		filings_csv_file,
-		skip_present_indices
-):
+def main():
 	"""
-	The main method iterates all over the tsv index files that are generated and calls a crawler method for each one of them
-	:param start_year: the year that you want to start downloading filings from
-	:param end_year: until which year you want to download filings
-	:param quarters: the quarters that you want to download filings
-	:param filing_types: list of filing types to download. e.g. ['10-K', '10-K405', '10-KT']
-	:param cik_tickers: list or path of file containing CIKs or Tickers.
-						In case of file provide each CIK or Ticker in a different line.
-	:param user_agent: the User-agent that will be declared to SEC EDGAR
-	:param raw_filings_folder: the folder where the raw filings will be saved
-	:param indices_folder: the folder where the edgar indices will be saved
-	:param filings_csv_file: CSV filename to save metadata
-	:param skip_present_indices: whether to skip already present indices or download them again
+	The main method iterates all over the tsv index files that are generated
+	and calls a crawler method for each one of them.
 	"""
 
-	raw_filings_folder = os.path.join(DATASET_DIR, raw_filings_folder)
-	indices_folder = os.path.join(DATASET_DIR, indices_folder)
-	filings_csv_filepath = os.path.join(DATASET_DIR, filings_csv_file)
+	with open('config.json') as fin:
+		config = json.load(fin)['edgar_crawler']
 
-	if len(filing_types) == 0:
+	raw_filings_folder = os.path.join(DATASET_DIR, config['raw_filings_folder'])
+	indices_folder = os.path.join(DATASET_DIR, config['indices_folder'])
+	filings_metadata_filepath = os.path.join(DATASET_DIR, config['filings_metadata_file'])
+
+	if len(config['filing_types']) == 0:
 		LOGGER.info(f'Please provide at least one filing type')
 		exit()
 
@@ -95,18 +64,18 @@ def main(
 			json.dump(obj={}, fp=f)
 
 	download_indices(
-		start_year=start_year,
-		end_year=end_year,
-		quarters=quarters,
-		skip_present_indices=skip_present_indices,
+		start_year=config['start_year'],
+		end_year=config['end_year'],
+		quarters=config['quarters'],
+		skip_present_indices=config['skip_present_indices'],
 		indices_folder=indices_folder,
-		user_agent=user_agent
+		user_agent=config['user_agent']
 	)
 
 	# Filter out years that are not related
 	tsv_filenames = []
-	for year in range(start_year, end_year + 1):
-		for quarter in quarters:
+	for year in range(config['start_year'], config['end_year'] + 1):
+		for quarter in config['quarters']:
 			filepath = os.path.join(indices_folder, f'{year}_QTR{quarter}.tsv')
 
 			if os.path.isfile(filepath):
@@ -115,14 +84,14 @@ def main(
 	# Get the indices that are specific to your needs
 	df = get_specific_indices(
 		tsv_filenames=tsv_filenames,
-		filing_types=filing_types,
-		cik_tickers=cik_tickers,
-		user_agent=user_agent
+		filing_types=config['filing_types'],
+		cik_tickers=config['cik_tickers'],
+		user_agent=config['user_agent']
 	)
 
 	old_df = None
-	if os.path.exists(filings_csv_filepath):
-		old_df = pd.read_csv(filings_csv_filepath, dtype=str)
+	if os.path.exists(filings_metadata_filepath):
+		old_df = pd.read_csv(filings_metadata_filepath, dtype=str)
 		series_to_download = []
 		LOGGER.info(f'\nReading filings metadata...\n')
 		for _, series in tqdm(df.iterrows(), total=len(df), ncols=100):
@@ -144,17 +113,17 @@ def main(
 	for series in tqdm(list_of_series, ncols=100):
 		series = crawl(
 			series=series,
-			filing_types=filing_types,
+			filing_types=config['filing_types'],
 			raw_filings_folder=raw_filings_folder,
-			user_agent=user_agent
+			user_agent=config['user_agent']
 		)
 		if series is not None:
 			final_series.append((series.to_frame()).T)
 			final_df = pd.concat(final_series) if (len(final_series) > 1) else final_series[0]
 			final_df = pd.concat([old_df, final_df])
-			final_df.to_csv(filings_csv_filepath, index=False, header=True)
+			final_df.to_csv(filings_metadata_filepath, index=False, header=True)
 
-	LOGGER.info(f'\nFinal dataframe exported to {filings_csv_filepath}')
+	LOGGER.info(f'\nFinal dataframe exported to {filings_metadata_filepath}')
 
 
 def download_indices(
@@ -239,7 +208,7 @@ def get_specific_indices(
 
 	if cik_tickers is not None:
 		if isinstance(cik_tickers, str):
-			if os.path.exists(cik_tickers) and os.path.isfile(cik_tickers):
+			if os.path.exists(cik_tickers) and os.path.isfile(cik_tickers):  # If filepath
 				with open(cik_tickers) as f:
 					cik_tickers = [line.strip() for line in f.readlines() if line.strip() != '']
 			else:
@@ -263,11 +232,11 @@ def get_specific_indices(
 		ticker2cik = dict(sorted(ticker2cik.items(), key=lambda item: item[0]))
 
 		for c_t in cik_tickers:
-			if isinstance(c_t, int) or c_t.isdigit():
+			if isinstance(c_t, int) or c_t.isdigit():  # If CIK
 				ciks.append(str(c_t))
 			else:
 				if c_t in ticker2cik:
-					ciks.append(ticker2cik[c_t])
+					ciks.append(str(ticker2cik[c_t]))  # If Ticker
 				else:
 					LOGGER.debug(f'Could not find CIK for "{c_t}"')
 
@@ -311,7 +280,7 @@ def crawl(
 ):
 	"""
 	Crawls the EDGAR HTML indexes
-	Lparam filing_types: list of filing types to download
+	:param filing_types: list of filing types to download
 	:param series: A single series with info for specific filings
 	:param raw_filings_folder: Raw filings folder path
 	:param user_agent: the User-agent that will be declared to SEC EDGAR

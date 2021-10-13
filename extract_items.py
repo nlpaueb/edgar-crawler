@@ -437,32 +437,26 @@ class ExtractItems:
         return 1
 
 
-@cli.command()
-@click.option('--raw_filings_folder', default='RAW_FILINGS')
-@click.option('--extracted_filings_folder', default='EXTRACTED_FILINGS')
-@click.option('--items_to_extract', default=['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A',
-                                             '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15'])
-def main(
-    raw_filings_folder: str,
-    extracted_filings_folder: str,
-    items_to_extract: List
-):
+def main():
     """
-    Gets the list of 10K files and extracts all textual items/sections by calling the extract_items() function
+    Gets the list of 10K files and extracts all textual items/sections by calling the extract_items() function.
     """
 
-    raw_filings_folder = os.path.join(DATASET_DIR, raw_filings_folder)
+    with open('config.json') as fin:
+        config = json.load(fin)['extract_items']
+
+    raw_filings_folder = os.path.join(DATASET_DIR, config['raw_filings_folder'])
     if not os.path.isdir(raw_filings_folder):
         LOGGER.info(f'No such directory: "{raw_filings_folder}')
         exit()
 
-    extracted_filings_folder = os.path.join(DATASET_DIR, extracted_filings_folder)
+    extracted_filings_folder = os.path.join(DATASET_DIR, config['extracted_filings_folder'])
 
     if not os.path.isdir(extracted_filings_folder):
         os.mkdir(extracted_filings_folder)
 
     extraction = ExtractItems(
-        items_to_extract=items_to_extract,
+        items_to_extract=config['items_to_extract'],
         raw_files_folder=raw_filings_folder,
         extracted_files_folder=extracted_filings_folder
     )
