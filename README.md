@@ -62,7 +62,7 @@ Read the paper here: [https://arxiv.org/abs/2109.14394](https://arxiv.org/abs/21
 
 ## Accompanying Resources
 - [corpus] EDGAR-CORPUS: A corpus for financial NLP research, built from SEC's EDGAR - [https://zenodo.org/record/5528490](https://zenodo.org/record/5528490)
-- [word2vec embeddings] Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
+- [embeddings] EDGAR-W2V: Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
 
 ## Contributing
 PRs and contributions are accepted.
