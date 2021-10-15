@@ -1,4 +1,3 @@
-import click
 import itertools
 import json
 import math
@@ -59,8 +58,8 @@ def main():
 	if not os.path.isdir(raw_filings_folder):
 		os.mkdir(raw_filings_folder)
 
-	if not os.path.isfile(os.path.join(DATASET_DIR, 'company_info.json')):
-		with open(os.path.join(DATASET_DIR, 'company_info.json'), 'w') as f:
+	if not os.path.isfile(os.path.join(DATASET_DIR, 'companies_info.json')):
+		with open(os.path.join(DATASET_DIR, 'companies_info.json'), 'w') as f:
 			json.dump(obj={}, fp=f)
 
 	download_indices(
@@ -91,15 +90,23 @@ def main():
 
 	old_df = None
 	if os.path.exists(filings_metadata_filepath):
-		old_df = pd.read_csv(filings_metadata_filepath, dtype=str)
+		old_df = []
 		series_to_download = []
 		LOGGER.info(f'\nReading filings metadata...\n')
+
+		for _, series in pd.read_csv(filings_metadata_filepath, dtype=str).iterrows():
+			if os.path.exists(os.path.join(raw_filings_folder, series['filename'])):
+				old_df.append((series.to_frame()).T)
+		old_df = pd.concat(old_df) if (len(old_df) > 1) else old_df[0]
+
 		for _, series in tqdm(df.iterrows(), total=len(df), ncols=100):
 			if len(old_df[old_df['html_index'] == series['html_index']]) == 0:
 				series_to_download.append((series.to_frame()).T)
+
 		if len(series_to_download) == 0:
 			LOGGER.info(f'\nThere are no more filings to download for the given years, quarters and companies')
 			exit()
+
 		df = pd.concat(series_to_download) if (len(series_to_download) > 1) else series_to_download[0]
 
 	# Make a list for each series of them
@@ -361,7 +368,7 @@ def crawl(
 
 	# https://www.sec.gov/cgi-bin/browse-edgar?CIK=0001000228
 	# https://data.sec.gov/submissions/CIK0001000228.json
-	with open(os.path.join(DATASET_DIR, 'company_info.json')) as f:
+	with open(os.path.join(DATASET_DIR, 'companies_info.json')) as f:
 		company_info_dict = json.load(fp=f)
 
 	cik = series['CIK']
@@ -411,7 +418,7 @@ def crawl(
 				if 'Fiscal Year End' in str(content):
 					company_info_dict[cik]['Fiscal Year End'] = str(content).split()[-1]
 
-		with open(os.path.join(DATASET_DIR, 'company_info.json'), 'w') as f:
+		with open(os.path.join(DATASET_DIR, 'companies_info.json'), 'w') as f:
 			json.dump(obj=company_info_dict, fp=f, indent=4)
 
 	if pd.isna(series['SIC']):
@@ -514,9 +521,6 @@ def download(
 	"""
 
 	filepath = os.path.join(download_folder, filename)
-
-	if os.path.exists(filepath):
-		LOGGER.debug(f'File "{filename}" already exists - URL: {url}')
 
 	try:
 		retries_exceeded = True

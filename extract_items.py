@@ -2,7 +2,9 @@ import click
 import cssutils
 import json
 import logging
+import numpy as np
 import os
+import pandas as pd
 import re
 import sys
 
@@ -56,16 +58,20 @@ class HtmlStripper(HTMLParser):
 class ExtractItems:
     def __init__(
             self,
+            remove_tables: bool,
             items_to_extract: List,
             raw_files_folder: str,
             extracted_files_folder: str
     ):
-        # Read from config
+
+        self.remove_tables = remove_tables
+        self.items_list = [
+            '1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A',
+            '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15'
+        ]
+        self.items_to_extract = items_to_extract if items_to_extract else self.items_list
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
-
-        self.items_list = ['1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A', '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15']
-        self.items_to_extract = items_to_extract
 
     @staticmethod
     def strip_html(html_content):
@@ -177,47 +183,52 @@ class ExtractItems:
         return non_blank_digits_percentage, spaces_percentage
 
     @staticmethod
-    def remove_html_tables(doc_10k):
+    def remove_html_tables(doc_10k, is_html):
         """
         Remove HTML tables that contain numerical data
         Note that there are many corner-cases in the tables that have text data instead of numerical
 
         :param doc_10k: The 10-K html
+        :param is_html: Whether the document contains html code or just plain text
         :return: doc_10k: The 10-K html without numerical tables
         """
 
-        tables = doc_10k.find_all('table')
+        if is_html:
+            tables = doc_10k.find_all('table')
 
-        # Detect tables that have numerical data
-        for tbl in tables:
-            trs = tbl.find_all('tr', attrs={'style': True}) + \
-                  tbl.find_all('td', attrs={'style': True}) + \
-                  tbl.find_all('th', attrs={'style': True})
+            # Detect tables that have numerical data
+            for tbl in tables:
+                trs = tbl.find_all('tr', attrs={'style': True}) + \
+                      tbl.find_all('td', attrs={'style': True}) + \
+                      tbl.find_all('th', attrs={'style': True})
 
-            background_found = False
+                background_found = False
 
-            for tr in trs:
-                # Parse given cssText which is assumed to be the content of a HTML style attribute
-                style = cssutils.parseStyle(tr['style'])
+                for tr in trs:
+                    # Parse given cssText which is assumed to be the content of a HTML style attribute
+                    style = cssutils.parseStyle(tr['style'])
 
-                if (style['background']
-                    and style['background'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']) \
-                    or (style['background-color']
-                        and style['background-color'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']):
-                    background_found = True
-                    break
+                    if (style['background']
+                        and style['background'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']) \
+                        or (style['background-color']
+                            and style['background-color'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']):
+                        background_found = True
+                        break
 
-            trs = tbl.find_all('tr', attrs={'bgcolor': True}) + tbl.find_all('td', attrs={
-                'bgcolor': True}) + tbl.find_all('th', attrs={'bgcolor': True})
+                trs = tbl.find_all('tr', attrs={'bgcolor': True}) + tbl.find_all('td', attrs={
+                    'bgcolor': True}) + tbl.find_all('th', attrs={'bgcolor': True})
 
-            bgcolor_found = False
-            for tr in trs:
-                if tr['bgcolor'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']:
-                    bgcolor_found = True
-                    break
+                bgcolor_found = False
+                for tr in trs:
+                    if tr['bgcolor'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']:
+                        bgcolor_found = True
+                        break
 
-            if bgcolor_found or background_found:
-                tbl.decompose()
+                if bgcolor_found or background_found:
+                    tbl.decompose()
+
+        else:
+            doc_10k = re.sub(r'<TABLE>.*?</TABLE>', '', str(doc_10k), flags=regex_flags)
 
         return doc_10k
 
@@ -341,14 +352,14 @@ class ExtractItems:
 
         return item_section
 
-    def extract_items(self, form10k_file):
+    def extract_items(self, filing_metadata):
         """
         Extracts all items/sections for a 10-K file and writes it to a CIK_10K_YEAR.json file (eg. 1384400_10K_2017.json)
 
-        :param form10k_file: Each htm/txt 10-K file
+        :param filing_metadata: a pandas series containing all filings metadata
         """
 
-        absolute_10k_filename = os.path.join(self.raw_files_folder, form10k_file)
+        absolute_10k_filename = os.path.join(self.raw_files_folder, filing_metadata['filename'])
 
         with open(absolute_10k_filename, 'r', errors='backslashreplace') as file:
             content = file.read()
@@ -373,39 +384,43 @@ class ExtractItems:
 
         if not found_10k:
             if documents:
-                LOGGER.info(f'Could not find document type 10K for {form10k_file}')
+                LOGGER.info(f'Could not find document type 10K for {filing_metadata["filename"]}')
             doc_10k = BeautifulSoup(content, 'lxml')
             is_html = (True if doc_10k.find('td') else False) and (True if doc_10k.find('tr') else False)
             if not is_html:
                 doc_10k = content
 
         # if not is_html and not documents:
-        if form10k_file.endswith('txt') and not documents:
-            LOGGER.info(f'No <DOCUMENT> tag for {form10k_file}')
+        if filing_metadata['filename'].endswith('txt') and not documents:
+            LOGGER.info(f'No <DOCUMENT> tag for {filing_metadata["filename"]}')
 
         # For non html clean all table items
-        if is_html:
-            doc_10k = self.remove_html_tables(doc_10k)
-        else:
-            doc_10k = re.sub(r'<TABLE>.*?</TABLE>', '', str(doc_10k), flags=regex_flags)
-
-        splits = form10k_file.split('.')[:-1][0].split('_')
+        if self.remove_tables:
+            doc_10k = self.remove_html_tables(doc_10k, is_html=is_html)
 
         json_content = {
-            'filename': form10k_file,
-            'cik': splits[0],
-            'filing_type': splits[1],
-            'year': splits[2],
-            'accession_number': splits[3]
+            'cik': filing_metadata['CIK'],
+            'company': filing_metadata['Company'],
+            'filing_type': filing_metadata['Type'],
+            'filing_date': filing_metadata['Date'],
+            'period_of_report': filing_metadata['Period of Report'],
+            'sic': filing_metadata['SIC'],
+            'state_of_inc': filing_metadata['State of Inc'],
+            'state_location': filing_metadata['State location'],
+            'fiscal_year_end': filing_metadata['Fiscal Year End'],
+            'filing_html_index': filing_metadata['html_index'],
+            'htm_filing_link': filing_metadata['htm_file_link'],
+            'complete_text_filing_link': filing_metadata['complete_text_file_link'],
+            'filename': filing_metadata['filename']
         }
         for item_index in self.items_to_extract:
-            json_content[f'section_{item_index}'] = ''
+            json_content[f'item_{item_index}'] = ''
 
         text = ExtractItems.strip_html(str(doc_10k))
         text = ExtractItems.clean_text(text)
 
         positions = []
-        all_sections_null = True
+        all_items_null = True
         for i, item_index in enumerate(self.items_list):
             next_item_list = self.items_list[i+1:]
             item_section, positions = self.parse_item(text, item_index, next_item_list, positions)
@@ -413,22 +428,22 @@ class ExtractItems:
 
             if item_index in self.items_to_extract:
                 if item_section != '':
-                    all_sections_null = False
-                json_content[f'section_{item_index}'] = item_section
+                    all_items_null = False
+                json_content[f'item_{item_index}'] = item_section
 
-        if all_sections_null:
-            json_content = None
+        if all_items_null:
             LOGGER.info(f'Could not extract any item for {absolute_10k_filename}')
+            return None
 
         return json_content
 
-    def process_filing(self, form10k_file):
-        json_filename = f'{form10k_file.split(".")[0]}.json'
+    def process_filing(self, filing_metadata):
+        json_filename = f'{filing_metadata["filename"].split(".")[0]}.json'
         absolute_json_filename = os.path.join(self.extracted_files_folder, json_filename)
         if os.path.exists(absolute_json_filename):
             return 0
 
-        json_content = self.extract_items(form10k_file)
+        json_content = self.extract_items(filing_metadata)
 
         if json_content is not None:
             with open(absolute_json_filename, 'w') as filepath:
@@ -445,10 +460,19 @@ def main():
     with open('config.json') as fin:
         config = json.load(fin)['extract_items']
 
+    filings_metadata_filepath = os.path.join(DATASET_DIR, config['filings_metadata_file'])
+    if os.path.exists(filings_metadata_filepath):
+        filings_metadata_df = pd.read_csv(filings_metadata_filepath, dtype=str)
+        filings_metadata_df = filings_metadata_df.replace({np.nan: None})
+
+    else:
+        LOGGER.info(f'No such file "{filings_metadata_filepath}"')
+        return
+
     raw_filings_folder = os.path.join(DATASET_DIR, config['raw_filings_folder'])
     if not os.path.isdir(raw_filings_folder):
         LOGGER.info(f'No such directory: "{raw_filings_folder}')
-        exit()
+        return
 
     extracted_filings_folder = os.path.join(DATASET_DIR, config['extracted_filings_folder'])
 
@@ -456,19 +480,22 @@ def main():
         os.mkdir(extracted_filings_folder)
 
     extraction = ExtractItems(
+        remove_tables=config['remove_tables'],
         items_to_extract=config['items_to_extract'],
         raw_files_folder=raw_filings_folder,
         extracted_files_folder=extracted_filings_folder
     )
 
-    # Get list of 10K files
-    list_of_files = [form10k_file for form10k_file in os.listdir(raw_filings_folder)
-                     if form10k_file.endswith('.txt') or form10k_file.endswith('.htm') or form10k_file.endswith('.html')]
-
     LOGGER.info(f'Starting extraction...\n')
 
+    list_of_series = list(zip(*filings_metadata_df.iterrows()))[1]
+
     with ProcessPool(processes=1) as pool:
-        processed = list(tqdm(pool.imap(extraction.process_filing, list_of_files), total=len(list_of_files), ncols=100))
+        processed = list(tqdm(
+            pool.imap(extraction.process_filing, list_of_series),
+            total=len(list_of_series),
+            ncols=100)
+        )
 
     LOGGER.info(f'\nItem extraction is completed successfully.')
     LOGGER.info(f'{sum(processed)} files were processed.')
