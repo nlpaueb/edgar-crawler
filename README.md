@@ -52,13 +52,19 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
 ## Citation
 If this work inspires you in any way, please consider citing the relevant paper, published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic & Online):
 ```
-@inproceedings{loukas2021edgarcorpus,
-      title={EDGAR-CORPUS: Billions of Tokens Make The World Go Round}, 
-      author={Lefteris Loukas and Manos Fergadiotis and Ion Androutsopoulos and Prodromos Malakasiotis},
-      year={2021},
-      eprint={2109.14394},
-      archivePrefix={arXiv},
-      primaryClass={cs.CL}
+@inproceedings{loukas-etal-2021-edgar,
+    title = "{EDGAR}-{CORPUS}: Billions of Tokens Make The World Go Round",
+    author = "Loukas, Lefteris  and
+      Fergadiotis, Manos  and
+      Androutsopoulos, Ion  and
+      Malakasiotis, Prodromos",
+    booktitle = "Proceedings of the Third Workshop on Economics and Natural Language Processing",
+    month = nov,
+    year = "2021",
+    address = "Punta Cana, Dominican Republic",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2021.econlp-1.2",
+    pages = "13--18",
 }
 ```
 Read the paper here: [https://arxiv.org/abs/2109.14394](https://arxiv.org/abs/2109.14394)
