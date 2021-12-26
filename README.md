@@ -50,7 +50,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
   - Reminder: We currently support the extraction of 10-K documents. 
 
 ## Citation
-If this work inspires you in any way, please consider citing the relevant paper published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic):
+If this work helps or inspires you in any way, please consider citing the relevant paper published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic):
 ```
 @inproceedings{loukas-etal-2021-edgar,
     title = "{EDGAR}-{CORPUS}: Billions of Tokens Make The World Go Round",
