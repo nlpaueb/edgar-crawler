@@ -31,7 +31,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
       - `--cik_tickers`: list or path of file containing CIKs or Tickers. e.g. `[789019, "1018724", "AAPL", "TWTR"]` <br>
         In case of file, provide each CIK or Ticker in a different line.  <br>
       If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
-      - `--user_agent`: the User-agent that will be declared to SEC EDGAR.
+      - `--user_agent`: the User-agent (name/email) that will be declared to SEC EDGAR.
       - `--raw_filings_folder`: the name of the folder where downloaded filings will be stored.<br> Default value is `'RAW_FILINGS'`.
       - `--indices_folder`: the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
       - `--filings_metadata_file`: CSV filename to save metadata from the reports.
