@@ -22,10 +22,10 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
 - Install dependencies via `pip install -r requirements.txt`
 
 ## Usage
-- Before running any script, you can edit the `config.json` file.
+- Before running any script, you should edit the `config.json` file.
   - Arguments for `edgar_crawler.py`, the module to download financial reports:
-      - `--start_year XXXX`: the year range to start from
-      - `--end_year YYYY`: the year range to end to
+      - `--start_year XXXX`: the year range to start from (default is 2021)
+      - `--end_year YYYY`: the year range to end to (default is 2021)
       - `--quarters`: the quarters that you want to download filings from (List).<br> Default value is: `[1, 2, 3, 4]`.
       - `--filing_types`: list of filing types to download.<br> Default value is: `['10-K', '10-K405', '10-KT']`.
       - `--cik_tickers`: list or path of file containing CIKs or Tickers. e.g. `[789019, "1018724", "AAPL", "TWTR"]` <br>
