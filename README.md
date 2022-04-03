@@ -9,6 +9,11 @@ More specifically, it can:
 
 The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management.
 
+## 🚨 News
+- 2022-04-03: EDGAR-CRAWLER is available for Windows systems too.
+- 2021-11-11: We presented EDGAR-CRAWLER at [ECONLP 2021](https://lt3.ugent.be/econlp/), which took place in conjunction with [EMNLP](https://2021.emnlp.org/) at the Dominican Republic.
+- 2021-09-16: [The research paper](https://arxiv.org/abs/2109.14394) is accepted at the [3rd Economics and Natural Language Processing Workshop](https://lt3.ugent.be/econlp/).
+
 ## Table of Contents
 - [Install](#install)
 - [Usage](#usage)
