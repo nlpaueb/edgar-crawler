@@ -480,7 +480,7 @@ def crawl(
 
 			if link_to_download is not None:
 				filing_type = re.sub(r"[\-/\\]", '', filing_type)
-				accession_num = series['complete_text_file_link'].split(os.sep)[-1].split('.')[0]
+				accession_num = os.path.splitext(os.path.basename(series['complete_text_file_link']))[0]
 				filename = f"{str(series['CIK'])}_{filing_type}_{period_of_report[:4]}_{accession_num}.{file_extension}"
 
 				# Download the file
