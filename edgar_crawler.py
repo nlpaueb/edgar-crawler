@@ -88,7 +88,7 @@ def main():
 		user_agent=config['user_agent']
 	)
 
-	old_df = None
+	old_df = []
 	if os.path.exists(filings_metadata_filepath):
 		old_df = []
 		series_to_download = []
@@ -97,10 +97,13 @@ def main():
 		for _, series in pd.read_csv(filings_metadata_filepath, dtype=str).iterrows():
 			if os.path.exists(os.path.join(raw_filings_folder, series['filename'])):
 				old_df.append((series.to_frame()).T)
-		old_df = pd.concat(old_df) if (len(old_df) > 1) else old_df[0]
+		if len(old_df) == 1:
+			old_df = old_df[0]
+		elif len(old_df) > 1:
+			old_df = pd.concat(old_df)
 
 		for _, series in tqdm(df.iterrows(), total=len(df), ncols=100):
-			if len(old_df[old_df['html_index'] == series['html_index']]) == 0:
+			if len(old_df) == 0 or len(old_df[old_df['html_index'] == series['html_index']]) == 0:
 				series_to_download.append((series.to_frame()).T)
 
 		if len(series_to_download) == 0:
@@ -127,10 +130,17 @@ def main():
 		if series is not None:
 			final_series.append((series.to_frame()).T)
 			final_df = pd.concat(final_series) if (len(final_series) > 1) else final_series[0]
-			final_df = pd.concat([old_df, final_df])
+			if len(old_df) > 0:
+				final_df = pd.concat([old_df, final_df])
 			final_df.to_csv(filings_metadata_filepath, index=False, header=True)
 
-	LOGGER.info(f'\nFinal dataframe exported to {filings_metadata_filepath}')
+	LOGGER.info(f'\nFilings metadata exported to {filings_metadata_filepath}')
+
+	if len(final_series) < len(list_of_series):
+		LOGGER.info(
+			f'\nDownloaded {len(final_series)} / {len(list_of_series)} filings. '
+			f'Rerun the script to retry downloading the failed filings.'
+		)
 
 
 def download_indices(
@@ -545,8 +555,6 @@ def download(
 
 	with open(filepath, 'wb') as f:
 		f.write(request.content)
-
-	# LOGGER.info(f'Successfully downloaded filing: {filename} - {url}')
 
 	# Check that MD5 hash is correct
 	# if hashlib.md5(open(filepath, 'rb').read()).hexdigest() != headers._headers[1][1].strip('"'):

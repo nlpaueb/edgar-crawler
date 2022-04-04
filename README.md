@@ -49,6 +49,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
       e.g. `['7','8']` to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items.<br>
       The default list contains all item sections.
     - `remove_tables`: Whether to remove tables containing mostly numerical (financial) data. This work is mostly to facilitate NLP research and often numerical tables are not useful
+    - `skip_extracted_filings`: Whether to skip already extracted filings or extract them nonetheless.<br> Default value is `True`.
 
 - To download financial reports from EDGAR, run `python edgar_crawler.py`
 - To clean and extract specific item sections from already-downloaded 10-K documents, run `python extract_items.py`.

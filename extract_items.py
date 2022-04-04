@@ -61,7 +61,8 @@ class ExtractItems:
             remove_tables: bool,
             items_to_extract: List,
             raw_files_folder: str,
-            extracted_files_folder: str
+            extracted_files_folder: str,
+            skip_extracted_filings: bool
     ):
 
         self.remove_tables = remove_tables
@@ -72,6 +73,7 @@ class ExtractItems:
         self.items_to_extract = items_to_extract if items_to_extract else self.items_list
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
+        self.skip_extracted_filings = skip_extracted_filings
 
     @staticmethod
     def strip_html(html_content):
@@ -182,8 +184,7 @@ class ExtractItems:
 
         return non_blank_digits_percentage, spaces_percentage
 
-    @staticmethod
-    def remove_html_tables(doc_10k, is_html):
+    def remove_html_tables(self, doc_10k, is_html):
         """
         Remove HTML tables that contain numerical data
         Note that there are many corner-cases in the tables that have text data instead of numerical
@@ -196,8 +197,28 @@ class ExtractItems:
         if is_html:
             tables = doc_10k.find_all('table')
 
+            items_list = []
+            for item_index in self.items_list:
+                if item_index == '9A':
+                    item_index = item_index.replace('A', r'[^\S\r\n]*A(?:\(T\))?')
+                elif 'A' in item_index:
+                    item_index = item_index.replace('A', r'[^\S\r\n]*A')
+                elif 'B' in item_index:
+                    item_index = item_index.replace('B', r'[^\S\r\n]*B')
+                items_list.append(item_index)
+
             # Detect tables that have numerical data
             for tbl in tables:
+
+                tbl_text = ExtractItems.clean_text(ExtractItems.strip_html(str(tbl)))
+                item_index_found = False
+                for item_index in items_list:
+                    if len(list(re.finditer(rf'\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]', tbl_text, flags=regex_flags))) > 0:
+                        item_index_found = True
+                        break
+                if item_index_found:
+                    continue
+
                 trs = tbl.find_all('tr', attrs={'style': True}) + \
                       tbl.find_all('td', attrs={'style': True}) + \
                       tbl.find_all('th', attrs={'style': True})
@@ -384,7 +405,7 @@ class ExtractItems:
 
         if not found_10k:
             if documents:
-                LOGGER.info(f'Could not find document type 10K for {filing_metadata["filename"]}')
+                LOGGER.info(f'\nCould not find document type 10K for {filing_metadata["filename"]}')
             doc_10k = BeautifulSoup(content, 'lxml')
             is_html = (True if doc_10k.find('td') else False) and (True if doc_10k.find('tr') else False)
             if not is_html:
@@ -392,7 +413,7 @@ class ExtractItems:
 
         # if not is_html and not documents:
         if filing_metadata['filename'].endswith('txt') and not documents:
-            LOGGER.info(f'No <DOCUMENT> tag for {filing_metadata["filename"]}')
+            LOGGER.info(f'\nNo <DOCUMENT> tag for {filing_metadata["filename"]}')
 
         # For non html clean all table items
         if self.remove_tables:
@@ -432,7 +453,7 @@ class ExtractItems:
                 json_content[f'item_{item_index}'] = item_section
 
         if all_items_null:
-            LOGGER.info(f'Could not extract any item for {absolute_10k_filename}')
+            LOGGER.info(f'\nCould not extract any item for {absolute_10k_filename}')
             return None
 
         return json_content
@@ -440,7 +461,7 @@ class ExtractItems:
     def process_filing(self, filing_metadata):
         json_filename = f'{filing_metadata["filename"].split(".")[0]}.json'
         absolute_json_filename = os.path.join(self.extracted_files_folder, json_filename)
-        if os.path.exists(absolute_json_filename):
+        if self.skip_extracted_filings and os.path.exists(absolute_json_filename):
             return 0
 
         json_content = self.extract_items(filing_metadata)
@@ -483,7 +504,8 @@ def main():
         remove_tables=config['remove_tables'],
         items_to_extract=config['items_to_extract'],
         raw_files_folder=raw_filings_folder,
-        extracted_files_folder=extracted_filings_folder
+        extracted_files_folder=extracted_filings_folder,
+        skip_extracted_filings=config['skip_extracted_filings']
     )
 
     LOGGER.info(f'Starting extraction...\n')
