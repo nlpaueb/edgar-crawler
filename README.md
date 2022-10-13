@@ -10,6 +10,7 @@ More specifically, it can:
 The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management.
 
 ## 🚨 News
+- 2022-10-13: Updated documentation and fixed a minor import bug.
 - 2022-04-03: EDGAR-CRAWLER is available for Windows systems too.
 - 2021-11-11: We presented EDGAR-CRAWLER at [ECONLP 2021](https://lt3.ugent.be/econlp/), which took place in conjunction with [EMNLP](https://2021.emnlp.org/) at the Dominican Republic.
 - 2021-09-16: [The research paper](https://arxiv.org/abs/2109.14394) is accepted at the [3rd Economics and Natural Language Processing Workshop](https://lt3.ugent.be/econlp/).
@@ -23,7 +24,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
 - [License](#license)
 
 ## Install
-- Before starting, ideally, it's recommended to switch to a virtual environment first via `conda`, using Python 3.7 or greater.
+- Before starting, it's recommended to [create a new virtual environment via Anaconda using Python 3.8](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands).
 - Install dependencies via `pip install -r requirements.txt`
 
 ## Usage
