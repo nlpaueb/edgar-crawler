@@ -6,5 +6,5 @@ lxml==4.9.1
 pandas==1.0.0
 requests==2.26.0
 tqdm==4.42.1
-pathos==0.2.5
+pathos==0.2.9
 urllib3==1.26.7
