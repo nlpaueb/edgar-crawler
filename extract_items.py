@@ -10,7 +10,7 @@ import sys
 
 from bs4 import BeautifulSoup
 from html.parser import HTMLParser
-from pathos.tools import ProcessPool
+from pathos.pools import ProcessPool
 from tqdm import tqdm
 from typing import List
 
