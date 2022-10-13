@@ -24,7 +24,7 @@ The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely o
 - [License](#license)
 
 ## Install
-- Before starting, it's recommended to [create a new virtual environment via Anaconda using Python 3.8](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands).
+- Before starting, it's recommended to create a new virtual environment using Python 3.8 or greater. We recommend [installing](https://docs.anaconda.com/anaconda/install/index.html) and [using Anaconda](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands) for this.
 - Install dependencies via `pip install -r requirements.txt`
 
 ## Usage
