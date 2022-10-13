@@ -84,5 +84,8 @@ PRs and contributions are accepted.
  
 Please use the [Feature Branch Workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow).
 
+## Issues
+Please create an issue on GitHub instead of emailing us directly so all possible users can benefit from the troubleshooting.
+
 ## License
 Please see the [GNU General Public License v3.0](https://github.com/nlpaueb/edgar-crawler/blob/main/LICENSE)
