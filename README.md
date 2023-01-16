@@ -10,6 +10,7 @@ More specifically, it can:
 The purpose of EDGAR-CRAWLER is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management.
 
 ## 🚨 News
+- 2023-01-16: The EDGAR-CORPUS dataset, a derivative dataset generated from EDGAR-CRAWLER, is available as a HuggingFace 🤗 dataset card as a convenient way to bootstrap your financial research. See [Accompanying Resources](#Accompanying-Resources) for more details.
 - 2022-10-13: Updated documentation and fixed a minor import bug.
 - 2022-04-03: EDGAR-CRAWLER is available for Windows systems too.
 - 2021-11-11: We presented EDGAR-CRAWLER at [ECONLP 2021](https://lt3.ugent.be/econlp/), which took place in conjunction with [EMNLP](https://2021.emnlp.org/) at the Dominican Republic.
@@ -78,7 +79,8 @@ Read the paper here: [https://arxiv.org/abs/2109.14394](https://arxiv.org/abs/21
 
 ## Accompanying Resources
 - [corpus] EDGAR-CORPUS: A corpus for financial NLP research, built from SEC's EDGAR - [https://zenodo.org/record/5528490](https://zenodo.org/record/5528490)
-- [embeddings] EDGAR-W2V: Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
+  - [corpus but as a HuggingFace 🤗 dataset card] -[https://huggingface.co/datasets/eloukas/edgar-corpus/](https://huggingface.co/datasets/eloukas/edgar-corpus/)
+- [word embeddings] EDGAR-W2V: Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
 
 ## Contributing
 PRs and contributions are accepted.
