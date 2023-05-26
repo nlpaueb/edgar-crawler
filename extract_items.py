@@ -382,7 +382,7 @@ class ExtractItems:
 
         absolute_10k_filename = os.path.join(self.raw_files_folder, filing_metadata['filename'])
 
-        with open(absolute_10k_filename, 'r', errors='backslashreplace') as file:
+        with open(absolute_10k_filename, 'r', errors='backslashreplace', encoding="UTF-8") as file:
             content = file.read()
 
         # Remove all embedded pdfs that might be seen in few old 10-K txt annual reports
@@ -396,7 +396,7 @@ class ExtractItems:
             doc_type = re.search(r'\n[^\S\r\n]*<TYPE>(.*?)\n', doc, flags=regex_flags)
             doc_type = doc_type.group(1) if doc_type else None
             if doc_type.startswith('10'):
-                doc_10k = BeautifulSoup(doc, 'lxml')
+                doc_10k = BeautifulSoup(doc, 'lxml', from_encoding='utf-8')
                 is_html = (True if doc_10k.find('td') else False) and (True if doc_10k.find('tr') else False)
                 if not is_html:
                     doc_10k = doc
@@ -406,7 +406,7 @@ class ExtractItems:
         if not found_10k:
             if documents:
                 LOGGER.info(f'\nCould not find document type 10K for {filing_metadata["filename"]}')
-            doc_10k = BeautifulSoup(content, 'lxml')
+            doc_10k = BeautifulSoup(content, 'lxml', from_encoding='utf-8')
             is_html = (True if doc_10k.find('td') else False) and (True if doc_10k.find('tr') else False)
             if not is_html:
                 doc_10k = content
@@ -418,9 +418,22 @@ class ExtractItems:
         # For non html clean all table items
         if self.remove_tables:
             doc_10k = self.remove_html_tables(doc_10k, is_html=is_html)
+        
+        ### ticker added ##########
+        with open('company_tickers_exchange.json') as data_file:
+            data=json.load(data_file)
+        
+        company_tickers = pd.DataFrame(data['data'])
+        company_tickers.columns = data['fields']
+        company_tickers['cik'] = company_tickers['cik'].astype(str)
+
+        
+        ticker = ", ".join(company_tickers.loc[company_tickers['cik']== filing_metadata['CIK'], "ticker"].tolist())
+        
 
         json_content = {
             'cik': filing_metadata['CIK'],
+            'ticker' : ticker,
             'company': filing_metadata['Company'],
             'filing_type': filing_metadata['Type'],
             'filing_date': filing_metadata['Date'],
@@ -467,8 +480,10 @@ class ExtractItems:
         json_content = self.extract_items(filing_metadata)
 
         if json_content is not None:
-            with open(absolute_json_filename, 'w') as filepath:
-                json.dump(json_content, filepath, indent=4)
+            #json_content = "\n".join(json_content) #############추가#########
+            with open(absolute_json_filename, 'w', encoding="UTF-8") as filepath:
+                json.dump(json_content, filepath, indent=4, ensure_ascii=False)
+                filepath.write('\n')
 
         return 1
 
