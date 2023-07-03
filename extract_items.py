@@ -29,7 +29,7 @@ cli = click.Group()
 regex_flags = re.IGNORECASE | re.DOTALL | re.MULTILINE
 
 # Instantiate a logger object
-LOGGER = Logger(name='ExtractItems').get_logger()
+LOGGER = Logger(name="ExtractItems").get_logger()
 
 
 class HtmlStripper(HTMLParser):
@@ -48,7 +48,7 @@ class HtmlStripper(HTMLParser):
         self.fed.append(d)
 
     def get_data(self):
-        return ''.join(self.fed)
+        return "".join(self.fed)
 
     def strip_tags(self, html):
         self.feed(html)
@@ -57,20 +57,39 @@ class HtmlStripper(HTMLParser):
 
 class ExtractItems:
     def __init__(
-            self,
-            remove_tables: bool,
-            items_to_extract: List,
-            raw_files_folder: str,
-            extracted_files_folder: str,
-            skip_extracted_filings: bool
+        self,
+        remove_tables: bool,
+        items_to_extract: List,
+        raw_files_folder: str,
+        extracted_files_folder: str,
+        skip_extracted_filings: bool,
     ):
-
         self.remove_tables = remove_tables
         self.items_list = [
-            '1', '1A', '1B', '2', '3', '4', '5', '6', '7', '7A',
-            '8', '9', '9A', '9B', '10', '11', '12', '13', '14', '15'
+            "1",
+            "1A",
+            "1B",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "7A",
+            "8",
+            "9",
+            "9A",
+            "9B",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
         ]
-        self.items_to_extract = items_to_extract if items_to_extract else self.items_list
+        self.items_to_extract = (
+            items_to_extract if items_to_extract else self.items_list
+        )
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
         self.skip_extracted_filings = skip_extracted_filings
@@ -84,9 +103,9 @@ class ExtractItems:
         """
 
         # TODO: Check if flags are required in the following regex
-        html_content = re.sub(r'(<\s*/\s*(div|tr|p|li|)\s*>)', r'\1\n\n', html_content)
-        html_content = re.sub(r'(<br\s*>|<br\s*/>)', r'\1\n\n', html_content)
-        html_content = re.sub(r'(<\s*/\s*(th|td)\s*>)', r' \1 ', html_content)
+        html_content = re.sub(r"(<\s*/\s*(div|tr|p|li|)\s*>)", r"\1\n\n", html_content)
+        html_content = re.sub(r"(<br\s*>|<br\s*/>)", r"\1\n\n", html_content)
+        html_content = re.sub(r"(<\s*/\s*(th|td)\s*>)", r" \1 ", html_content)
         html_content = HtmlStripper().strip_tags(html_content)
 
         return html_content
@@ -100,10 +119,10 @@ class ExtractItems:
         :return: String without multiple newlines
         """
 
-        text = re.sub(r'(( )*\n( )*){2,}', '#NEWLINE', text)
-        text = re.sub(r'\n', ' ', text)
-        text = re.sub(r'(#NEWLINE)+', '\n', text).strip()
-        text = re.sub(r'[ ]{2,}', ' ', text)
+        text = re.sub(r"(( )*\n( )*){2,}", "#NEWLINE", text)
+        text = re.sub(r"\n", " ", text)
+        text = re.sub(r"(#NEWLINE)+", "\n", text).strip()
+        text = re.sub(r"[ ]{2,}", " ", text)
 
         return text
 
@@ -117,45 +136,66 @@ class ExtractItems:
         :return: String containing normalized, clean text
         """
 
-        text = re.sub(r'[\xa0]', ' ', text)
-        text = re.sub(r'[\u200b]', ' ', text)
+        text = re.sub(r"[\xa0]", " ", text)
+        text = re.sub(r"[\u200b]", " ", text)
 
-        text = re.sub(r'[\x91]', '‘', text)
-        text = re.sub(r'[\x92]', '’', text)
-        text = re.sub(r'[\x93]', '“', text)
-        text = re.sub(r'[\x94]', '”', text)
-        text = re.sub(r'[\x95]', '•', text)
-        text = re.sub(r'[\x96]', '-', text)
-        text = re.sub(r'[\x97]', '-', text)
-        text = re.sub(r'[\x98]', '˜', text)
-        text = re.sub(r'[\x99]', '™', text)
+        text = re.sub(r"[\x91]", "‘", text)
+        text = re.sub(r"[\x92]", "’", text)
+        text = re.sub(r"[\x93]", "“", text)
+        text = re.sub(r"[\x94]", "”", text)
+        text = re.sub(r"[\x95]", "•", text)
+        text = re.sub(r"[\x96]", "-", text)
+        text = re.sub(r"[\x97]", "-", text)
+        text = re.sub(r"[\x98]", "˜", text)
+        text = re.sub(r"[\x99]", "™", text)
 
-        text = re.sub(r'[\u2010\u2011\u2012\u2013\u2014\u2015]', '-', text)
+        text = re.sub(r"[\u2010\u2011\u2012\u2013\u2014\u2015]", "-", text)
 
         def remove_whitespace(match):
-            ws = r'[^\S\r\n]'
+            ws = r"[^\S\r\n]"
             return f'{match[1]}{re.sub(ws, r"", match[2])}{match[3]}{match[4]}'
 
         # Fix broken section headers
-        text = re.sub(r'(\n[^\S\r\n]*)(P[^\S\r\n]*A[^\S\r\n]*R[^\S\r\n]*T)([^\S\r\n]+)((\d{1,2}|[IV]{1,2})[AB]?)',
-                      remove_whitespace, text, flags=re.IGNORECASE)
-        text = re.sub(r'(\n[^\S\r\n]*)(I[^\S\r\n]*T[^\S\r\n]*E[^\S\r\n]*M)([^\S\r\n]+)(\d{1,2}[AB]?)',
-                      remove_whitespace, text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"(\n[^\S\r\n]*)(P[^\S\r\n]*A[^\S\r\n]*R[^\S\r\n]*T)([^\S\r\n]+)((\d{1,2}|[IV]{1,2})[AB]?)",
+            remove_whitespace,
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r"(\n[^\S\r\n]*)(I[^\S\r\n]*T[^\S\r\n]*E[^\S\r\n]*M)([^\S\r\n]+)(\d{1,2}[AB]?)",
+            remove_whitespace,
+            text,
+            flags=re.IGNORECASE,
+        )
 
-        text = re.sub(r'(ITEM|PART)(\s+\d{1,2}[AB]?)([\-•])', r'\1\2 \3 ', text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"(ITEM|PART)(\s+\d{1,2}[AB]?)([\-•])",
+            r"\1\2 \3 ",
+            text,
+            flags=re.IGNORECASE,
+        )
 
         # Remove unnecessary headers
-        text = re.sub(r'\n[^\S\r\n]*'
-                      r'(TABLE\s+OF\s+CONTENTS|INDEX\s+TO\s+FINANCIAL\s+STATEMENTS|BACK\s+TO\s+CONTENTS|QUICKLINKS)'
-                      r'[^\S\r\n]*\n',
-                      '\n', text, flags=regex_flags)
+        text = re.sub(
+            r"\n[^\S\r\n]*"
+            r"(TABLE\s+OF\s+CONTENTS|INDEX\s+TO\s+FINANCIAL\s+STATEMENTS|BACK\s+TO\s+CONTENTS|QUICKLINKS)"
+            r"[^\S\r\n]*\n",
+            "\n",
+            text,
+            flags=regex_flags,
+        )
 
         # Remove page numbers and headers
-        text = re.sub(r'\n[^\S\r\n]*[-‒–—]*\d+[-‒–—]*[^\S\r\n]*\n', '\n', text, flags=regex_flags)
-        text = re.sub(r'\n[^\S\r\n]*\d+[^\S\r\n]*\n', '\n', text, flags=regex_flags)
+        text = re.sub(
+            r"\n[^\S\r\n]*[-‒–—]*\d+[-‒–—]*[^\S\r\n]*\n", "\n", text, flags=regex_flags
+        )
+        text = re.sub(r"\n[^\S\r\n]*\d+[^\S\r\n]*\n", "\n", text, flags=regex_flags)
 
-        text = re.sub(r'[\n\s]F[-‒–—]*\d+', '', text, flags=regex_flags)
-        text = re.sub(r'\n[^\S\r\n]*Page\s[\d*]+[^\S\r\n]*\n', '', text, flags=regex_flags)
+        text = re.sub(r"[\n\s]F[-‒–—]*\d+", "", text, flags=regex_flags)
+        text = re.sub(
+            r"\n[^\S\r\n]*Page\s[\d*]+[^\S\r\n]*\n", "", text, flags=regex_flags
+        )
 
         return text
 
@@ -195,53 +235,79 @@ class ExtractItems:
         """
 
         if is_html:
-            tables = doc_10k.find_all('table')
+            tables = doc_10k.find_all("table")
 
             items_list = []
             for item_index in self.items_list:
-                if item_index == '9A':
-                    item_index = item_index.replace('A', r'[^\S\r\n]*A(?:\(T\))?')
-                elif 'A' in item_index:
-                    item_index = item_index.replace('A', r'[^\S\r\n]*A')
-                elif 'B' in item_index:
-                    item_index = item_index.replace('B', r'[^\S\r\n]*B')
+                if item_index == "9A":
+                    item_index = item_index.replace("A", r"[^\S\r\n]*A(?:\(T\))?")
+                elif "A" in item_index:
+                    item_index = item_index.replace("A", r"[^\S\r\n]*A")
+                elif "B" in item_index:
+                    item_index = item_index.replace("B", r"[^\S\r\n]*B")
                 items_list.append(item_index)
 
             # Detect tables that have numerical data
             for tbl in tables:
-
                 tbl_text = ExtractItems.clean_text(ExtractItems.strip_html(str(tbl)))
                 item_index_found = False
                 for item_index in items_list:
-                    if len(list(re.finditer(rf'\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]', tbl_text, flags=regex_flags))) > 0:
+                    if (
+                        len(
+                            list(
+                                re.finditer(
+                                    rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]",
+                                    tbl_text,
+                                    flags=regex_flags,
+                                )
+                            )
+                        )
+                        > 0
+                    ):
                         item_index_found = True
                         break
                 if item_index_found:
                     continue
 
-                trs = tbl.find_all('tr', attrs={'style': True}) + \
-                      tbl.find_all('td', attrs={'style': True}) + \
-                      tbl.find_all('th', attrs={'style': True})
+                trs = (
+                    tbl.find_all("tr", attrs={"style": True})
+                    + tbl.find_all("td", attrs={"style": True})
+                    + tbl.find_all("th", attrs={"style": True})
+                )
 
                 background_found = False
 
                 for tr in trs:
                     # Parse given cssText which is assumed to be the content of a HTML style attribute
-                    style = cssutils.parseStyle(tr['style'])
+                    style = cssutils.parseStyle(tr["style"])
 
-                    if (style['background']
-                        and style['background'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']) \
-                        or (style['background-color']
-                            and style['background-color'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']):
+                    if (
+                        style["background"]
+                        and style["background"].lower()
+                        not in ["none", "transparent", "#ffffff", "#fff", "white"]
+                    ) or (
+                        style["background-color"]
+                        and style["background-color"].lower()
+                        not in ["none", "transparent", "#ffffff", "#fff", "white"]
+                    ):
                         background_found = True
                         break
 
-                trs = tbl.find_all('tr', attrs={'bgcolor': True}) + tbl.find_all('td', attrs={
-                    'bgcolor': True}) + tbl.find_all('th', attrs={'bgcolor': True})
+                trs = (
+                    tbl.find_all("tr", attrs={"bgcolor": True})
+                    + tbl.find_all("td", attrs={"bgcolor": True})
+                    + tbl.find_all("th", attrs={"bgcolor": True})
+                )
 
                 bgcolor_found = False
                 for tr in trs:
-                    if tr['bgcolor'].lower() not in ['none', 'transparent', '#ffffff', '#fff', 'white']:
+                    if tr["bgcolor"].lower() not in [
+                        "none",
+                        "transparent",
+                        "#ffffff",
+                        "#fff",
+                        "white",
+                    ]:
                         bgcolor_found = True
                         break
 
@@ -249,7 +315,7 @@ class ExtractItems:
                     tbl.decompose()
 
         else:
-            doc_10k = re.sub(r'<TABLE>.*?</TABLE>', '', str(doc_10k), flags=regex_flags)
+            doc_10k = re.sub(r"<TABLE>.*?</TABLE>", "", str(doc_10k), flags=regex_flags)
 
         return doc_10k
 
@@ -264,12 +330,12 @@ class ExtractItems:
         :return: item_section: The item/section as a text string
         """
 
-        if item_index == '9A':
-            item_index = item_index.replace('A', r'[^\S\r\n]*A(?:\(T\))?')
-        elif 'A' in item_index:
-            item_index = item_index.replace('A', r'[^\S\r\n]*A')
-        elif 'B' in item_index:
-            item_index = item_index.replace('B', r'[^\S\r\n]*B')
+        if item_index == "9A":
+            item_index = item_index.replace("A", r"[^\S\r\n]*A(?:\(T\))?")
+        elif "A" in item_index:
+            item_index = item_index.replace("A", r"[^\S\r\n]*A")
+        elif "B" in item_index:
+            item_index = item_index.replace("B", r"[^\S\r\n]*B")
 
         # Depending on the item_index, search for subsequent sections.
 
@@ -281,31 +347,49 @@ class ExtractItems:
         for next_item_index in next_item_list:
             if possible_sections_list:
                 break
-            if next_item_index == '9A':
-                next_item_index = next_item_index.replace('A', r'[^\S\r\n]*A(?:\(T\))?')
-            elif 'A' in next_item_index:
-                next_item_index = next_item_index.replace('A', r'[^\S\r\n]*A')
-            elif 'B' in next_item_index:
-                next_item_index = next_item_index.replace('B', r'[^\S\r\n]*B')
+            if next_item_index == "9A":
+                next_item_index = next_item_index.replace("A", r"[^\S\r\n]*A(?:\(T\))?")
+            elif "A" in next_item_index:
+                next_item_index = next_item_index.replace("A", r"[^\S\r\n]*A")
+            elif "B" in next_item_index:
+                next_item_index = next_item_index.replace("B", r"[^\S\r\n]*B")
 
-            for match in list(re.finditer(rf'\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]', text, flags=regex_flags)):
+            for match in list(
+                re.finditer(
+                    rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]",
+                    text,
+                    flags=regex_flags,
+                )
+            ):
                 offset = match.start()
 
-                possible = list(re.finditer(
-                    rf'\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s].+?([^\S\r\n]*ITEM\s+{str(next_item_index)}[.*~\-:\s])',
-                    text[offset:], flags=regex_flags))
+                possible = list(
+                    re.finditer(
+                        rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s].+?([^\S\r\n]*ITEM\s+{str(next_item_index)}[.*~\-:\s])",
+                        text[offset:],
+                        flags=regex_flags,
+                    )
+                )
                 if possible:
                     possible_sections_list += [(offset, possible)]
 
         # Extract the wanted section from the text
-        item_section, positions = ExtractItems.get_item_section(possible_sections_list, text, positions)
+        item_section, positions = ExtractItems.get_item_section(
+            possible_sections_list, text, positions
+        )
 
         # If item is the last one (usual case when dealing with EDGAR's old .txt files), get all the text from its beginning until EOF.
         if positions:
-            if item_index in self.items_list and item_section == '':
-                item_section = ExtractItems.get_last_item_section(item_index, text, positions)
-            elif item_index == '15':  # Item 15 is the last one, get all the text from its beginning until EOF
-                item_section = ExtractItems.get_last_item_section(item_index, text, positions)
+            if item_index in self.items_list and item_section == "":
+                item_section = ExtractItems.get_last_item_section(
+                    item_index, text, positions
+                )
+            elif (
+                item_index == "15"
+            ):  # Item 15 is the last one, get all the text from its beginning until EOF
+                item_section = ExtractItems.get_last_item_section(
+                    item_index, text, positions
+                )
 
         return item_section.strip(), positions
 
@@ -320,17 +404,20 @@ class ExtractItems:
         :return: The correct section
         """
 
-        item_section = ''
+        item_section = ""
         max_match_length = 0
         max_match = None
         max_match_offset = None
 
         # Find the match with the largest section
-        for (offset, matches) in possible_sections_list:
+        for offset, matches in possible_sections_list:
             for match in matches:
                 match_length = match.end() - match.start()
                 if positions:
-                    if match_length > max_match_length and offset + match.start() >= positions[-1]:
+                    if (
+                        match_length > max_match_length
+                        and offset + match.start() >= positions[-1]
+                    ):
                         max_match = match
                         max_match_offset = offset
                         max_match_length = match_length
@@ -343,9 +430,17 @@ class ExtractItems:
         if max_match:
             if positions:
                 if max_match_offset + max_match.start() >= positions[-1]:
-                    item_section = text[max_match_offset + max_match.start(): max_match_offset + max_match.regs[1][0]]
+                    item_section = text[
+                        max_match_offset
+                        + max_match.start() : max_match_offset
+                        + max_match.regs[1][0]
+                    ]
             else:
-                item_section = text[max_match_offset + max_match.start(): max_match_offset + max_match.regs[1][0]]
+                item_section = text[
+                    max_match_offset
+                    + max_match.start() : max_match_offset
+                    + max_match.regs[1][0]
+                ]
             positions.append(max_match_offset + max_match.end() - len(max_match[1]) - 1)
 
         return item_section, positions
@@ -363,12 +458,16 @@ class ExtractItems:
         :return: All the remaining text until the end, starting from the specified item_index
         """
 
-        item_list = list(re.finditer(rf'\n[^\S\r\n]*ITEM\s+{item_index}[.\-:\s].+?', text, flags=regex_flags))
+        item_list = list(
+            re.finditer(
+                rf"\n[^\S\r\n]*ITEM\s+{item_index}[.\-:\s].+?", text, flags=regex_flags
+            )
+        )
 
-        item_section = ''
+        item_section = ""
         for item in item_list:
             if item.start() >= positions[-1]:
-                item_section = text[item.start():].strip()
+                item_section = text[item.start() :].strip()
                 break
 
         return item_section
@@ -380,24 +479,30 @@ class ExtractItems:
         :param filing_metadata: a pandas series containing all filings metadata
         """
 
-        absolute_10k_filename = os.path.join(self.raw_files_folder, filing_metadata['filename'])
+        absolute_10k_filename = os.path.join(
+            self.raw_files_folder, filing_metadata["filename"]
+        )
 
-        with open(absolute_10k_filename, 'r', errors='backslashreplace', encoding="UTF-8") as file:
+        with open(
+            absolute_10k_filename, "r", errors="backslashreplace", encoding="UTF-8"
+        ) as file:
             content = file.read()
 
         # Remove all embedded pdfs that might be seen in few old 10-K txt annual reports
-        content = re.sub(r'<PDF>.*?</PDF>', '', content, flags=regex_flags)
+        content = re.sub(r"<PDF>.*?</PDF>", "", content, flags=regex_flags)
 
-        documents = re.findall('<DOCUMENT>.*?</DOCUMENT>', content, flags=regex_flags)
+        documents = re.findall("<DOCUMENT>.*?</DOCUMENT>", content, flags=regex_flags)
 
         doc_10k = None
         found_10k, is_html = False, False
         for doc in documents:
-            doc_type = re.search(r'\n[^\S\r\n]*<TYPE>(.*?)\n', doc, flags=regex_flags)
+            doc_type = re.search(r"\n[^\S\r\n]*<TYPE>(.*?)\n", doc, flags=regex_flags)
             doc_type = doc_type.group(1) if doc_type else None
-            if doc_type.startswith('10'):
-                doc_10k = BeautifulSoup(doc, 'lxml', from_encoding='utf-8')
-                is_html = (True if doc_10k.find('td') else False) and (True if doc_10k.find('tr') else False)
+            if doc_type.startswith("10"):
+                doc_10k = BeautifulSoup(doc, "lxml", from_encoding="utf-8")
+                is_html = (True if doc_10k.find("td") else False) and (
+                    True if doc_10k.find("tr") else False
+                )
                 if not is_html:
                     doc_10k = doc
                 found_10k = True
@@ -405,50 +510,96 @@ class ExtractItems:
 
         if not found_10k:
             if documents:
-                LOGGER.info(f'\nCould not find document type 10K for {filing_metadata["filename"]}')
-            doc_10k = BeautifulSoup(content, 'lxml', from_encoding='utf-8')
-            is_html = (True if doc_10k.find('td') else False) and (True if doc_10k.find('tr') else False)
+                LOGGER.info(
+                    f'\nCould not find document type 10K for {filing_metadata["filename"]}'
+                )
+            doc_10k = BeautifulSoup(content, "lxml", from_encoding="utf-8")
+            is_html = (True if doc_10k.find("td") else False) and (
+                True if doc_10k.find("tr") else False
+            )
             if not is_html:
                 doc_10k = content
 
         # if not is_html and not documents:
-        if filing_metadata['filename'].endswith('txt') and not documents:
+        if filing_metadata["filename"].endswith("txt") and not documents:
             LOGGER.info(f'\nNo <DOCUMENT> tag for {filing_metadata["filename"]}')
 
         # For non html clean all table items
         if self.remove_tables:
             doc_10k = self.remove_html_tables(doc_10k, is_html=is_html)
-        
-        ### ticker added ##########
-        with open('company_tickers_exchange.json') as data_file:
-            data=json.load(data_file)
-        
-        company_tickers = pd.DataFrame(data['data'])
-        company_tickers.columns = data['fields']
-        company_tickers['cik'] = company_tickers['cik'].astype(str)
 
-        
-        ticker = ", ".join(company_tickers.loc[company_tickers['cik']== filing_metadata['CIK'], "ticker"].tolist())
-        
+        ### ticker added ##########
+        with open("company_tickers_exchange.json") as data_file:
+            data = json.load(data_file)
+
+        company_tickers = pd.DataFrame(data["data"])
+        company_tickers.columns = data["fields"]
+        company_tickers["cik"] = company_tickers["cik"].astype(str)
+
+        ticker = ", ".join(
+            company_tickers.loc[
+                company_tickers["cik"] == filing_metadata["CIK"], "ticker"
+            ].tolist()
+        )
+
+        ### sector, industry, exchange, country added ##########
+        company_sectors = pd.read_csv("stock_sector_info.csv")
+        company_sectors["cik"] = company_sectors["cik"].astype(str)
+
+        try:
+            sector = company_sectors.loc[
+                company_sectors["cik"] == filing_metadata["CIK"], "sector"
+            ]
+            sector = sector.fillna("").values[0]
+        except:
+            sector = ""
+
+        try:
+            industry = company_sectors.loc[
+                company_sectors["cik"] == filing_metadata["CIK"], "industry"
+            ]
+            industry = industry.fillna("").values[0]
+        except:
+            industry = ""
+
+        try:
+            exchange = company_sectors.loc[
+                company_sectors["cik"] == filing_metadata["CIK"], "exchange"
+            ]
+            exchange = exchange.fillna("").values[0]
+        except:
+            exchange = ""
+
+        try:
+            country = company_sectors.loc[
+                company_sectors["cik"] == filing_metadata["CIK"], "country"
+            ]
+            country = country.fillna("").values[0]
+        except:
+            country = ""
 
         json_content = {
-            'cik': filing_metadata['CIK'],
-            'ticker' : ticker,
-            'company': filing_metadata['Company'],
-            'filing_type': filing_metadata['Type'],
-            'filing_date': filing_metadata['Date'],
-            'period_of_report': filing_metadata['Period of Report'],
-            'sic': filing_metadata['SIC'],
-            'state_of_inc': filing_metadata['State of Inc'],
-            'state_location': filing_metadata['State location'],
-            'fiscal_year_end': filing_metadata['Fiscal Year End'],
-            'filing_html_index': filing_metadata['html_index'],
-            'htm_filing_link': filing_metadata['htm_file_link'],
-            'complete_text_filing_link': filing_metadata['complete_text_file_link'],
-            'filename': filing_metadata['filename']
+            "cik": filing_metadata["CIK"],
+            "ticker": ticker,
+            "sector": sector,
+            "industry": industry,
+            "exchange": exchange,
+            "country": country,
+            "company": filing_metadata["Company"],
+            "filing_type": filing_metadata["Type"],
+            "filing_date": filing_metadata["Date"],
+            "period_of_report": filing_metadata["Period of Report"],
+            "sic": filing_metadata["SIC"],
+            "state_of_inc": filing_metadata["State of Inc"],
+            "state_location": filing_metadata["State location"],
+            "fiscal_year_end": filing_metadata["Fiscal Year End"],
+            "filing_html_index": filing_metadata["html_index"],
+            "htm_filing_link": filing_metadata["htm_file_link"],
+            "complete_text_filing_link": filing_metadata["complete_text_file_link"],
+            "filename": filing_metadata["filename"],
         }
         for item_index in self.items_to_extract:
-            json_content[f'item_{item_index}'] = ''
+            json_content[f"item_{item_index}"] = ""
 
         text = ExtractItems.strip_html(str(doc_10k))
         text = ExtractItems.clean_text(text)
@@ -456,34 +607,38 @@ class ExtractItems:
         positions = []
         all_items_null = True
         for i, item_index in enumerate(self.items_list):
-            next_item_list = self.items_list[i+1:]
-            item_section, positions = self.parse_item(text, item_index, next_item_list, positions)
+            next_item_list = self.items_list[i + 1 :]
+            item_section, positions = self.parse_item(
+                text, item_index, next_item_list, positions
+            )
             item_section = ExtractItems.remove_multiple_lines(item_section)
 
             if item_index in self.items_to_extract:
-                if item_section != '':
+                if item_section != "":
                     all_items_null = False
-                json_content[f'item_{item_index}'] = item_section
+                json_content[f"item_{item_index}"] = item_section
 
         if all_items_null:
-            LOGGER.info(f'\nCould not extract any item for {absolute_10k_filename}')
+            LOGGER.info(f"\nCould not extract any item for {absolute_10k_filename}")
             return None
 
         return json_content
 
     def process_filing(self, filing_metadata):
         json_filename = f'{filing_metadata["filename"].split(".")[0]}.json'
-        absolute_json_filename = os.path.join(self.extracted_files_folder, json_filename)
+        absolute_json_filename = os.path.join(
+            self.extracted_files_folder, json_filename
+        )
         if self.skip_extracted_filings and os.path.exists(absolute_json_filename):
             return 0
 
         json_content = self.extract_items(filing_metadata)
 
         if json_content is not None:
-            #json_content = "\n".join(json_content) #############추가#########
-            with open(absolute_json_filename, 'w', encoding="UTF-8") as filepath:
+            # json_content = "\n".join(json_content) #############추가#########
+            with open(absolute_json_filename, "w", encoding="UTF-8") as filepath:
                 json.dump(json_content, filepath, indent=4, ensure_ascii=False)
-                filepath.write('\n')
+                filepath.write("\n")
 
         return 1
 
@@ -493,10 +648,12 @@ def main():
     Gets the list of 10K files and extracts all textual items/sections by calling the extract_items() function.
     """
 
-    with open('config.json') as fin:
-        config = json.load(fin)['extract_items']
+    with open("config.json") as fin:
+        config = json.load(fin)["extract_items"]
 
-    filings_metadata_filepath = os.path.join(DATASET_DIR, config['filings_metadata_file'])
+    filings_metadata_filepath = os.path.join(
+        DATASET_DIR, config["filings_metadata_file"]
+    )
     if os.path.exists(filings_metadata_filepath):
         filings_metadata_df = pd.read_csv(filings_metadata_filepath, dtype=str)
         filings_metadata_df = filings_metadata_df.replace({np.nan: None})
@@ -505,39 +662,43 @@ def main():
         LOGGER.info(f'No such file "{filings_metadata_filepath}"')
         return
 
-    raw_filings_folder = os.path.join(DATASET_DIR, config['raw_filings_folder'])
+    raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
     if not os.path.isdir(raw_filings_folder):
         LOGGER.info(f'No such directory: "{raw_filings_folder}')
         return
 
-    extracted_filings_folder = os.path.join(DATASET_DIR, config['extracted_filings_folder'])
+    extracted_filings_folder = os.path.join(
+        DATASET_DIR, config["extracted_filings_folder"]
+    )
 
     if not os.path.isdir(extracted_filings_folder):
         os.mkdir(extracted_filings_folder)
 
     extraction = ExtractItems(
-        remove_tables=config['remove_tables'],
-        items_to_extract=config['items_to_extract'],
+        remove_tables=config["remove_tables"],
+        items_to_extract=config["items_to_extract"],
         raw_files_folder=raw_filings_folder,
         extracted_files_folder=extracted_filings_folder,
-        skip_extracted_filings=config['skip_extracted_filings']
+        skip_extracted_filings=config["skip_extracted_filings"],
     )
 
-    LOGGER.info(f'Starting extraction...\n')
+    LOGGER.info(f"Starting extraction...\n")
 
     list_of_series = list(zip(*filings_metadata_df.iterrows()))[1]
 
     with ProcessPool(processes=1) as pool:
-        processed = list(tqdm(
-            pool.imap(extraction.process_filing, list_of_series),
-            total=len(list_of_series),
-            ncols=100)
+        processed = list(
+            tqdm(
+                pool.imap(extraction.process_filing, list_of_series),
+                total=len(list_of_series),
+                ncols=100,
+            )
         )
 
-    LOGGER.info(f'\nItem extraction is completed successfully.')
-    LOGGER.info(f'{sum(processed)} files were processed.')
-    LOGGER.info(f'Extracted filings are saved to: {extracted_filings_folder}')
+    LOGGER.info(f"\nItem extraction is completed successfully.")
+    LOGGER.info(f"{sum(processed)} files were processed.")
+    LOGGER.info(f"Extracted filings are saved to: {extracted_filings_folder}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
