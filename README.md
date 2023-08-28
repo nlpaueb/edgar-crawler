@@ -1,18 +1,25 @@
-# EDGAR-CRAWLER
+# EDGAR-CRAWLER: Unlock the Power of Financial Documents 🚀
 ![EDGAR-CRAWLER-LOGO](images/edgar-crawler-logo-white-bg.jpeg)
 
-`EDGAR-CRAWLER` is an open-source & optimized toolkit that retrieves data from financial reports. It can crawl any report found in the [SEC EDGAR](https://www.sec.gov/edgar.shtml) database, the web repository for all publicly traded companies in the USA.
+Tired of sifting through endless financial reports of 100+ pages, struggling to extract meaningful insights? 
+
+📊 `EDGAR-CRAWLER` is an open-source & optimized toolkit that retrieves key data from financial reports. It can crawl any report found in the [SEC EDGAR](https://www.sec.gov/edgar.shtml) database, the web repository for all publicly traded companies in the USA.
 
 Most importantly, apart from downloading EDGAR filings like other standard toolkits, `EDGAR-CRAWLER` can also preprocess and convert them from lengthy and unstructured documents into clean and easy-to-use JSON files. 
 
-To the best of our knowledge, `EDGAR-CRAWLER` is the first (open) toolkit to do this without requiring a paid subscription. We support 10-K filings (annual reports) at the time, which is the the most comprehensive filing type among others. 
+### `EDGAR-CRAWLER` has 2 core features:
+📥🕷️ Business Documents Crawling: Utilize the power of the `edgar_crawler.py` module to effortlessly crawl and download financial reports for every publicly-traded company within your specified years.
 
-More specifically, `EDGAR-CRAWLER` can:
-- Crawl and download all possible financial reports for each publicly-traded company, for specified years, through the `edgar_crawler.py` module.
-- Extract and clean all specific text sections for 10-K documents (annual reports), such as Risk Factors (Item 1A), MD&A (Item 7), and others, through the `extract_items.py` module. 
+🔍📑 Item Extraction: Extract and clean specific text sections such as Risk Factors or Management's Discussion & Analysis from 10-K documents (annual reports) using the `extract_items.py` module. Get straight to the heart of the information that matters most.
 
-The objective of `EDGAR-CRAWLER` is to speed up research and experiments that rely on financial information, as they are widely seen in the research literature of economics, finance, business and management, and, computer science.
-## Star History
+### Who Can Benefit from `EDGAR-CRAWLER`?
+📚 Academics: Enhance your NLP research in economics & finance, business management, and computer science by accessing and analyzing financial data efficiently.
+
+💼 Professionals: Strengthen financial analysis, strategic planning, and decision-making with comprehensive, easy-to-interpret financial reports.
+
+💻🛠 Developers: Seamlessly integrate financial data into your models, applications, and experiments using our open-source toolkit.
+
+### Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=nlpaueb/edgar-crawler&type=Date)](https://star-history.com/#nlpaueb/edgar-crawler&Date)
 ## Table of Contents
