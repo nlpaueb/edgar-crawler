@@ -3,25 +3,31 @@
 
 Tired of sifting through endless financial reports of 100+ pages, struggling to extract meaningful insights? 
 
-📊 `EDGAR-CRAWLER` is an open-source & optimized toolkit that retrieves key data from financial reports. It can crawl any report found in the [SEC EDGAR](https://www.sec.gov/edgar.shtml) database, the web repository for all publicly traded companies in the USA.
+📊 `EDGAR-CRAWLER` is an open-source & optimized toolkit that retrieves key information from financial reports. It can crawl any report found in the [SEC EDGAR](https://www.sec.gov/edgar.shtml) database, the web repository for all publicly traded companies in the USA.
 
 Most importantly, apart from downloading EDGAR filings like other standard toolkits, `EDGAR-CRAWLER` can also preprocess and convert them from lengthy and unstructured documents into clean and easy-to-use JSON files. 
 
-### `EDGAR-CRAWLER` has 2 core features:
+### `EDGAR-CRAWLER` has 2 core modules:
 📥🕷️ Business Documents Crawling: Utilize the power of the `edgar_crawler.py` module to effortlessly crawl and download financial reports for every publicly-traded company within your specified years.
 
 🔍📑 Item Extraction: Extract and clean specific text sections such as Risk Factors or Management's Discussion & Analysis from 10-K documents (annual reports) using the `extract_items.py` module. Get straight to the heart of the information that matters most.
 
-### Who Can Benefit from `EDGAR-CRAWLER`?
-📚 Academics: Enhance your NLP research in economics & finance, business management, and computer science by accessing and analyzing financial data efficiently.
+## Who Can Benefit from `EDGAR-CRAWLER`?
+📚 Academics: Enhance your NLP research in economics & finance or business management by accessing and analyzing financial data efficiently.
 
 💼 Professionals: Strengthen financial analysis, strategic planning, and decision-making with comprehensive, easy-to-interpret financial reports.
 
-💻🛠 Developers: Seamlessly integrate financial data into your models, applications, and experiments using our open-source toolkit.
+🛠 Developers: Seamlessly integrate financial data into your models, applications, and experiments using our open-source toolkit.
 
 ### Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=nlpaueb/edgar-crawler&type=Date)](https://star-history.com/#nlpaueb/edgar-crawler&Date)
+## 🚨 News
+- 2023-01-16: EDGAR-CORPUS, the biggest financial NLP corpus (generated from `EDGAR-CRAWLER`), is available as a HuggingFace 🤗 dataset card. See [Accompanying Resources](#Accompanying-Resources) for more details.
+- 2022-10-13: Updated documentation and fixed a minor import bug.
+- 2022-04-03: `EDGAR-CRAWLER` is available for Windows systems too.
+- 2021-11-11: We presented EDGAR-CORPUS, our sister work that started it all, at [ECONLP 2021](https://lt3.ugent.be/econlp/) (EMNLP Workshop) at the Dominican Republic.
+
 ## Table of Contents
 - [Install](#install)
 - [Usage](#usage)
@@ -86,8 +92,7 @@ Read the paper here: [https://aclanthology.org/2021.econlp-1.2/](https://aclanth
 ## Accompanying Resources
 - [EDGAR-CORPUS on Zenodo] EDGAR-CORPUS: The biggest corpus for financial NLP research, built from `EDGAR-CRAWLER` - [https://zenodo.org/record/5528490](https://zenodo.org/record/5528490)
 - [EDGAR-CORPUS on HuggingFace 🤗 datasets] -[https://huggingface.co/datasets/eloukas/edgar-corpus/](https://huggingface.co/datasets/eloukas/edgar-corpus/)
-- [EDGAR-W2V Word2Vec Embeddings] EDGAR-W2V: Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
-
+- [Financial Word2Vec Embeddings] EDGAR-W2V: Word2vec Embeddings trained on EDGAR-CORPUS - [https://zenodo.org/record/5524358](https://zenodo.org/record/5524358)
 
 ## Contributing
 PRs and contributions are accepted.
