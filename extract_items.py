@@ -1,3 +1,4 @@
+import bs4
 import click
 import cssutils
 import json
@@ -613,6 +614,74 @@ class ExtractItems:
                 break
 
         return item_section
+
+    @staticmethod
+    def find_background_color(tbl: bs4.element.Tag) -> bool:
+        trs = (
+            tbl.find_all("tr", attrs={"style": True})
+            + tbl.find_all("td", attrs={"style": True})
+            + tbl.find_all("th", attrs={"style": True})
+        )
+
+        background_found = False
+        for tr in trs:
+            # Parse given cssText which is assumed to be the content of a HTML style attribute
+            style = cssutils.parseStyle(tr["style"])
+            if (
+                style["background"]
+                and style["background"].lower()
+                not in ["none", "transparent", "#ffffff", "#fff", "white"]
+            ) or (
+                style["background-color"]
+                and style["background-color"].lower()
+                not in ["none", "transparent", "#ffffff", "#fff", "white"]
+            ):
+                background_found = True
+                break
+
+        return background_found
+
+    def retrieve_html_tables(self, doc: str, is_html: bool) -> list[pd.DataFrame]:
+        """
+        Retrieve all HTML tables that contain numerical data as pandas DataFrames.
+
+        Args:
+            doc: Some html document.
+            is_html: Whether the document contains html code or just plain text.
+
+        Returns:
+            pandas DataFrame containing numerical data.
+        """
+        dfs = []
+
+        if is_html:
+            tables = doc.find_all("table")
+
+            for tbl in tables:
+                if ExtractItems.find_background_color(tbl):
+                    table_data = []
+                    rows = tbl.find_all("tr")[1:]
+
+                    for row in rows:
+                        cols = [
+                            re.sub(r"[\$\)]", "", ele.text.strip())
+                            for ele in row.find_all("td")
+                        ]
+                        cols = [x + ")" if x.startswith("(") else x for x in cols]
+                        cols = list(filter(None, cols))
+
+                        if len(cols) > 1:
+                            table_data.append(cols)
+
+                    if table_data:
+                        cc = max(len(r) for r in table_data)
+                        table_data = [
+                            r if len(r) == cc else [""] * (cc - len(r)) + r
+                            for r in table_data
+                        ]
+                        dfs.append(pd.DataFrame(table_data[1:], columns=table_data[0]))
+
+        return dfs
 
     def extract_items(self, filing_metadata: Dict[str, Any]) -> Any:
         """
