@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
                 "14",
                 "15",
             ],
-            raw_files_folder="/tmp/edgar_crawler/",
+            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS_TABLE",
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -72,10 +72,11 @@ class Test(unittest.TestCase):
                     f.write("\n")
 
             expected_filing_filepath = os.path.join(
-                "/tmp/edgar_crawler",
+                "/tmp/edgar_crawler/EXTRACTED_TABLES",
                 f"{filing_metadata['filename'].split('.')[0]}.csv"
             )
             tables = csv_to_list(tables_filepath)
             expected_tables = csv_to_list(expected_filing_filepath)
 
-            assert tables == expected_tables, f"CSV file is different: {tables} != {expected_tables}"
+            for i, (v1, v2) in enumerate(zip(tables, expected_tables)):
+                assert v1 == v2, f"({i}) row in CSV file is different: {v1} != {v2}"
