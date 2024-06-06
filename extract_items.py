@@ -18,6 +18,8 @@ from logger import Logger
 
 from __init__ import DATASET_DIR
 
+from item_lists import item_list_10k, item_list_8k, item_list_10q, item_list_8k_obsolete
+
 # Change the default recursion limit of 1000 to 30000
 sys.setrecursionlimit(30000)
 
@@ -128,35 +130,44 @@ class ExtractItems:
         """
         self.remove_tables = remove_tables
         # Default list of items to extract
-        self.items_list = [
-            "1",
-            "1A",
-            "1B",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "7A",
-            "8",
-            "9",
-            "9A",
-            "9B",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-        ]
-        # If no specific items to extract are provided, use default list
-        self.items_to_extract = (
-            items_to_extract if items_to_extract else self.items_list
-        )
+        self.items_to_extract = items_to_extract
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
         self.skip_extracted_filings = skip_extracted_filings
+    
+    def determine_items_to_extract(self, filing_metadata) -> None:
+        """
+        Determine the items to extract based on the filing type.
+
+        Sets the items_to_extract attribute based on the filing type and the items provided by the user.
+        """
+        if filing_metadata["Type"] == "10-K":
+            items_list = item_list_10k
+        elif filing_metadata["Type"] == "8-K":
+            # Prior to August 23, 2004, the 8-K items were named differently
+            obsolete_cutoff_date_8k = pd.to_datetime("2004-08-23")
+            if pd.to_datetime(filing_metadata["Date"]) > obsolete_cutoff_date_8k:
+                items_list = item_list_8k
+            else:
+                items_list = item_list_8k_obsolete
+        elif filing_metadata["Type"] == "10-Q":
+            #TODO: this needs to be updated since we need to use a dict for this "items_list"
+            items_list = item_list_10q
+        else:
+            raise Exception(f"Unsupported filing type: {filing_metadata['Type']}. No items_list defined.")
+
+        self.items_list = items_list
+        
+        #Check which items the user provided and which items are available for the filing type
+        if self.items_to_extract:
+            overlapping_items_to_extract = [item for item in self.items_to_extract if item in items_list]
+            if overlapping_items_to_extract:
+                self.items_to_extract = overlapping_items_to_extract
+            else:
+                raise Exception(f"Items defined by user do not match the items for {filing_metadata['Type']} filings.")
+        else:
+            self.items_to_extract = items_list
+        
 
     @staticmethod
     def strip_html(html_content: str) -> str:
@@ -175,6 +186,8 @@ class ExtractItems:
         html_content = re.sub(r"(<br\s*>|<br\s*/>)", r"\1\n\n", html_content)
         # Replace closing tags of certain elements with a space
         html_content = re.sub(r"(<\s*/\s*(th|td)\s*>)", r" \1 ", html_content)
+        # Extract content from <span> tags and add whitespaces around it
+        html_content = re.sub(r"<span[^>]*>(.*?)<\/span>", r" \1 ", html_content)
         # Use HtmlStripper to strip remaining HTML tags
         html_content = HtmlStripper().strip_tags(html_content)
 
@@ -226,12 +239,19 @@ class ExtractItems:
         text = re.sub(r"[\x98]", "˜", text)
         text = re.sub(r"[\x99]", "™", text)
         text = re.sub(r"[\u2010\u2011\u2012\u2013\u2014\u2015]", "-", text)
+        # text = re.sub(r"[\u2018]", "‘", text)
+        # text = re.sub(r"[\u2019]", "’", text)
+        # text = re.sub(r"[\u2009]", " ", text) #TODO: these don't do anything right now
+        # text = re.sub(r"[\u00ae]", "®", text)
+        # text = re.sub(r"[\u201c]", "“", text)
+        # text = re.sub(r"[\u201d]", "”", text)
+
 
         def remove_whitespace(match):
             ws = r"[^\S\r\n]"
             return f'{match[1]}{re.sub(ws, r"", match[2])}{match[3]}{match[4]}'
 
-        # Fix broken section headers
+        # Fix broken section headers (PART, ITEM, SIGNATURE)
         text = re.sub(
             r"(\n[^\S\r\n]*)(P[^\S\r\n]*A[^\S\r\n]*R[^\S\r\n]*T)([^\S\r\n]+)((\d{1,2}|[IV]{1,2})[AB]?)",
             remove_whitespace,
@@ -240,6 +260,12 @@ class ExtractItems:
         )
         text = re.sub(
             r"(\n[^\S\r\n]*)(I[^\S\r\n]*T[^\S\r\n]*E[^\S\r\n]*M)([^\S\r\n]+)(\d{1,2}[AB]?)",
+            remove_whitespace,
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r"(\n[^\S\r\n]*)(S[^\S\r\n]*I[^\S\r\n]*G[^\S\r\n]*N[^\S\r\n]*A[^\S\r\n]*T[^\S\r\n]*U[^\S\r\n]*R[^\S\r\n]*E[^\S\r\n]*S?)([^\S\r\n]+)([^\S\r\n]?)",
             remove_whitespace,
             text,
             flags=re.IGNORECASE,
@@ -333,6 +359,8 @@ class ExtractItems:
                 # Modify the item index format for matching in the table
                 if item_index == "9A":
                     item_index = item_index.replace("A", r"[^\S\r\n]*A(?:\(T\))?")
+                elif item_index == "SIGNATURE":
+                    pass
                 elif "A" in item_index:
                     item_index = item_index.replace("A", r"[^\S\r\n]*A")
                 elif "B" in item_index:
@@ -344,11 +372,17 @@ class ExtractItems:
                 tbl_text = ExtractItems.clean_text(ExtractItems.strip_html(str(tbl)))
                 item_index_found = False
                 for item_index in items_list:
+                    # If the item is SIGNATURE, we don't want to look for ITEM
+                    if item_index == 'SIGNATURE':
+                        #Some reports have SIGNATURES instead of SIGNATURE
+                        item_index_pattern = rf"{item_index}S?"
+                    else:
+                        item_index_pattern = rf"ITEM\s+{item_index}"
                     if (
                         len(
                             list(
                                 re.finditer(
-                                    rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]",
+                                    rf"\n[^\S\r\n]*ITEM\s+{item_index_pattern}[.*~\-:\s]",
                                     tbl_text,
                                     flags=regex_flags,
                                 )
@@ -438,19 +472,32 @@ class ExtractItems:
         # Set the regex flags
         regex_flags = re.IGNORECASE | re.DOTALL
 
+        #Create a regex pattern from the item index
+        item_index_pattern = item_index
+
         # Modify the item index format for matching in the text
         if item_index == "9A":
-            item_index = item_index.replace(
+            item_index_pattern = item_index_pattern.replace(
                 "A", r"[^\S\r\n]*A(?:\(T\))?"
             )  # Regex pattern for item index "9A"
+        elif item_index == "SIGNATURE":
+                #Quit here so the A in SIGNATURE is not changed
+                pass
         elif "A" in item_index:
-            item_index = item_index.replace(
+            item_index_pattern = item_index_pattern.replace(
                 "A", r"[^\S\r\n]*A"
             )  # Regex pattern for other "A" item indexes
         elif "B" in item_index:
-            item_index = item_index.replace(
+            item_index_pattern = item_index_pattern.replace(
                 "B", r"[^\S\r\n]*B"
             )  # Regex pattern for "B" item indexes
+        
+        # If the item is SIGNATURE, we don't want to look for ITEM
+        if item_index == 'SIGNATURE':
+            #Some reports have SIGNATURES instead of SIGNATURE
+            item_index_pattern = rf"{item_index}S?"
+        else:
+            item_index_pattern = rf"ITEM\s+{item_index}"
 
         # Depending on the item_index, search for subsequent sections.
         # There might be many 'candidate' text sections between 2 Items.
@@ -459,25 +506,37 @@ class ExtractItems:
 
         possible_sections_list = []
         for next_item_index in next_item_list:
+            #Create a regex pattern from the next item index
+            next_item_index_pattern = next_item_index
             if possible_sections_list:
                 break
             if next_item_index == "9A":
-                next_item_index = next_item_index.replace(
+                next_item_index_pattern = next_item_index_pattern.replace(
                     "A", r"[^\S\r\n]*A(?:\(T\))?"
                 )  # Regex pattern for next_item_index "9A"
+            elif next_item_index == "SIGNATURE":
+                #So the A in SIGNATURE is not changed
+                pass
             elif "A" in next_item_index:
-                next_item_index = next_item_index.replace(
+                next_item_index_pattern = next_item_index_pattern.replace(
                     "A", r"[^\S\r\n]*A"
                 )  # Regex pattern for other "A" next_item_indexes
             elif "B" in next_item_index:
-                next_item_index = next_item_index.replace(
+                next_item_index_pattern = next_item_index_pattern.replace(
                     "B", r"[^\S\r\n]*B"
                 )  # Regex pattern for "B" next_item_indexes
+            
+            # If the item is SIGNATURE, we don't want to look for ITEM
+            if next_item_index == 'SIGNATURE':
+                #Some reports have SIGNATURES instead of SIGNATURE
+                next_item_index_pattern = rf"{next_item_index}S?"
+            else:
+                next_item_index_pattern = rf"ITEM\s+{next_item_index}"
 
             # Find all the text sections between the current item and the next item
             for match in list(
                 re.finditer(
-                    rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s]",
+                    rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s]",
                     text,
                     flags=regex_flags,
                 )
@@ -486,7 +545,7 @@ class ExtractItems:
 
                 possible = list(
                     re.finditer(
-                        rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s].+?([^\S\r\n]*ITEM\s+{str(next_item_index)}[.*~\-:\s])",
+                        rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s].+?([^\S\r\n]*{str(next_item_index_pattern)}[.*~\-:\s])",
                         text[offset:],
                         flags=regex_flags,
                     )
@@ -508,8 +567,8 @@ class ExtractItems:
                 item_section = ExtractItems.get_last_item_section(
                     item_index, text, positions
                 )
-            # Item 15 is the last one, get all the text from its beginning until EOF
-            elif item_index == "15":
+            # SIGNATURE is the last one, get all the text from its beginning until EOF
+            elif item_index == "SIGNATURE":
                 item_section = ExtractItems.get_last_item_section(
                     item_index, text, positions
                 )
@@ -597,10 +656,16 @@ class ExtractItems:
                 str: All the remaining text until the end, starting from the specified item_index
         """
 
+        # If the item is SIGNATURE or SIGNATURES, we don't want to look for ITEM
+        if item_index == 'SIGNATURE':
+            item_index_pattern = rf"{item_index}S?"
+        else:
+            item_index_pattern = rf"ITEM\s+{item_index}"
+
         # Find all occurrences of the item/section using regex
         item_list = list(
             re.finditer(
-                rf"\n[^\S\r\n]*ITEM\s+{item_index}[.\-:\s].+?", text, flags=regex_flags
+                rf"\n[^\S\r\n]*{item_index_pattern}[.\-:\s].+?", text, flags=regex_flags
             )
         )
 
@@ -625,12 +690,12 @@ class ExtractItems:
                 Any: The extracted JSON content
         """
 
-        absolute_10k_filename = os.path.join(
+        absolute_filename = os.path.join(
             self.raw_files_folder, filing_metadata["filename"]
         )
 
         # Read the content of the 10-K file
-        with open(absolute_10k_filename, "r", errors="backslashreplace") as file:
+        with open(absolute_filename, "r", errors="backslashreplace") as file:
             content = file.read()
 
         # Remove all embedded pdfs that might be seen in few old 10-K txt annual reports
@@ -701,7 +766,10 @@ class ExtractItems:
 
         # Initialize item sections as empty strings in the JSON content
         for item_index in self.items_to_extract:
-            json_content[f"item_{item_index}"] = ""
+            if item_index == "SIGNATURE":
+                json_content[f"{item_index}"] = ""
+            else:
+                json_content[f"item_{item_index}"] = ""
 
         # Extract the text from the document and clean it
         text = ExtractItems.strip_html(str(doc_10k))
@@ -723,10 +791,15 @@ class ExtractItems:
             if item_index in self.items_to_extract:
                 if item_section != "":
                     all_items_null = False
+
+            #Add the item section to the JSON content
+            if item_index == "SIGNATURE":
+                json_content[f"{item_index}"] = item_section
+            else:
                 json_content[f"item_{item_index}"] = item_section
 
         if all_items_null:
-            LOGGER.info(f"\nCould not extract any item for {absolute_10k_filename}")
+            LOGGER.info(f"\nCould not extract any item for {absolute_filename}")
             return None
 
         return json_content
@@ -744,6 +817,9 @@ class ExtractItems:
 
         # Generate the JSON filename based on the original filename
         json_filename = f'{filing_metadata["filename"].split(".")[0]}.json'
+
+        # Determine which items to extract based on the filing type and the items provided by the user
+        self.determine_items_to_extract(filing_metadata)
 
         # Create the absolute path for the JSON file
         absolute_json_filename = os.path.join(
@@ -784,6 +860,22 @@ def main() -> None:
     else:
         LOGGER.info(f'No such file "{filings_metadata_filepath}"')
         return
+    
+    # If the user provided filing types, filter out the filings that are not in the list
+    if config["filing_types"]:
+        filings_metadata_df = filings_metadata_df[
+            filings_metadata_df["Type"].isin(config["filing_types"])
+        ]
+    if len(filings_metadata_df) == 0:
+        LOGGER.info(f"No filings to process for filing types {config['filing_types']}.")
+        return
+    
+    #For debugging one document
+    # debug_file = "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/msft-20230630.htm"
+    # debug_file = "https://www.sec.gov/Archives/edgar/data/1318605/000156459023000002/tsla-8k_20230102.htm"
+    # filings_metadata_df = filings_metadata_df[filings_metadata_df["htm_file_link"] == debug_file]
+    # debug_file = "https://www.sec.gov/Archives/edgar/data/320193/000091205700002128/0000912057-00-002128.txt"
+    # filings_metadata_df = filings_metadata_df[filings_metadata_df["complete_text_file_link"] == debug_file]
 
     raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
 

@@ -1,11 +1,11 @@
 {
 	"edgar_crawler": {
-		"start_year": 2021,
-		"end_year": 2021,
+		"start_year": 2023,
+		"end_year": 2023,
 		"quarters": [1, 2, 3, 4],
-		"filing_types": ["10-K", "10-K405", "10-KT"],
-		"cik_tickers": [],
-		"user_agent": "Your name (your email)",
+		"filing_types": ["10-K", "8-K"],
+		"cik_tickers": ["AAPL"],
+		"user_agent": "",
 		"raw_filings_folder": "RAW_FILINGS",
 		"indices_folder": "INDICES",
 		"filings_metadata_file": "FILINGS_METADATA.csv",
@@ -15,11 +15,9 @@
 		"raw_filings_folder": "RAW_FILINGS",
 		"extracted_filings_folder": "EXTRACTED_FILINGS",
 		"filings_metadata_file": "FILINGS_METADATA.csv",
-		"items_to_extract": [
-			"1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A",
-			"8", "9", "9A", "9B", "10", "11", "12", "13", "14", "15"
-		],
-		"remove_tables": true,
-		"skip_extracted_filings": true
+		"filing_types": ["8-K", "10-K"],
+		"items_to_extract": [],
+		"remove_tables": false,
+		"skip_extracted_filings": false
 	}
 }
