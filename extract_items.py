@@ -114,6 +114,7 @@ class ExtractItems:
         self,
         remove_tables: bool,
         items_to_extract: List[str],
+        include_signature: bool,
         raw_files_folder: str,
         extracted_files_folder: str,
         skip_extracted_filings: bool,
@@ -131,6 +132,7 @@ class ExtractItems:
         self.remove_tables = remove_tables
         # Default list of items to extract
         self.items_to_extract = items_to_extract
+        self.include_signature = include_signature
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
         self.skip_extracted_filings = skip_extracted_filings
@@ -186,8 +188,8 @@ class ExtractItems:
         html_content = re.sub(r"(<br\s*>|<br\s*/>)", r"\1\n\n", html_content)
         # Replace closing tags of certain elements with a space
         html_content = re.sub(r"(<\s*/\s*(th|td)\s*>)", r" \1 ", html_content)
-        # Extract content from <span> tags and add whitespaces around it
-        html_content = re.sub(r"<span[^>]*>(.*?)<\/span>", r" \1 ", html_content)
+        # Extract content from <span> tags (these can sometimes be in the middle of a word, so dont add whitespaces!)
+        html_content = re.sub(r"<span[^>]*>(.*?)<\/span>", r"\1", html_content)
         # Use HtmlStripper to strip remaining HTML tags
         html_content = HtmlStripper().strip_tags(html_content)
 
@@ -250,6 +252,9 @@ class ExtractItems:
         def remove_whitespace(match):
             ws = r"[^\S\r\n]"
             return f'{match[1]}{re.sub(ws, r"", match[2])}{match[3]}{match[4]}'
+        def remove_whitespace_signature(match):
+            ws = r"[^\S\r\n]"
+            return f'{match[1]}{re.sub(ws, r"", match[2])}{match[4]}{match[5]}'
 
         # Fix broken section headers (PART, ITEM, SIGNATURE)
         text = re.sub(
@@ -265,8 +270,8 @@ class ExtractItems:
             flags=re.IGNORECASE,
         )
         text = re.sub(
-            r"(\n[^\S\r\n]*)(S[^\S\r\n]*I[^\S\r\n]*G[^\S\r\n]*N[^\S\r\n]*A[^\S\r\n]*T[^\S\r\n]*U[^\S\r\n]*R[^\S\r\n]*E[^\S\r\n]*S?)([^\S\r\n]+)([^\S\r\n]?)",
-            remove_whitespace,
+            r"(\n[^\S\r\n]*)(S[^\S\r\n]*I[^\S\r\n]*G[^\S\r\n]*N[^\S\r\n]*A[^\S\r\n]*T[^\S\r\n]*U[^\S\r\n]*R[^\S\r\n]*E[^\S\r\n]*(S|\([^\S\r\n]*s[^\S\r\n]*\))?)([^\S\r\n]+)([^\S\r\n]?)",
+            remove_whitespace_signature,
             text,
             flags=re.IGNORECASE,
         )
@@ -374,15 +379,15 @@ class ExtractItems:
                 for item_index in items_list:
                     # If the item is SIGNATURE, we don't want to look for ITEM
                     if item_index == 'SIGNATURE':
-                        #Some reports have SIGNATURES instead of SIGNATURE
-                        item_index_pattern = rf"{item_index}S?"
+                        #Some reports have SIGNATURES or Signature(s) instead of SIGNATURE
+                        item_index_pattern = rf"{item_index}(s|\(s\))?"
                     else:
                         item_index_pattern = rf"ITEM\s+{item_index}"
                     if (
                         len(
                             list(
                                 re.finditer(
-                                    rf"\n[^\S\r\n]*ITEM\s+{item_index_pattern}[.*~\-:\s]",
+                                    rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s]",
                                     tbl_text,
                                     flags=regex_flags,
                                 )
@@ -494,8 +499,8 @@ class ExtractItems:
         
         # If the item is SIGNATURE, we don't want to look for ITEM
         if item_index == 'SIGNATURE':
-            #Some reports have SIGNATURES instead of SIGNATURE
-            item_index_pattern = rf"{item_index}S?"
+            #Some reports have SIGNATURES or Signature(s) instead of SIGNATURE
+            item_index_pattern = rf"{item_index}(s|\(s\))?"
         else:
             item_index_pattern = rf"ITEM\s+{item_index}"
 
@@ -528,8 +533,8 @@ class ExtractItems:
             
             # If the item is SIGNATURE, we don't want to look for ITEM
             if next_item_index == 'SIGNATURE':
-                #Some reports have SIGNATURES instead of SIGNATURE
-                next_item_index_pattern = rf"{next_item_index}S?"
+                #Some reports have SIGNATURES or Signature(s) instead of SIGNATURE
+                next_item_index_pattern = rf"{next_item_index}(s|\(s\))?"
             else:
                 next_item_index_pattern = rf"ITEM\s+{next_item_index}"
 
@@ -545,7 +550,7 @@ class ExtractItems:
 
                 possible = list(
                     re.finditer(
-                        rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s].+?([^\S\r\n]*{str(next_item_index_pattern)}[.*~\-:\s])",
+                        rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s].+?(\n[^\S\r\n]*{str(next_item_index_pattern)}[.*~\-:\s])",
                         text[offset:],
                         flags=regex_flags,
                     )
@@ -656,9 +661,9 @@ class ExtractItems:
                 str: All the remaining text until the end, starting from the specified item_index
         """
 
-        # If the item is SIGNATURE or SIGNATURES, we don't want to look for ITEM
+        # If the item is SIGNATURE, Signature(s) or SIGNATURES, we don't want to look for ITEM
         if item_index == 'SIGNATURE':
-            item_index_pattern = rf"{item_index}S?"
+            item_index_pattern = rf"{item_index}(s|\(s\))?"
         else:
             item_index_pattern = rf"ITEM\s+{item_index}"
 
@@ -727,10 +732,10 @@ class ExtractItems:
                 break
 
         if not found_10k:
-            if documents:
-                LOGGER.info(
-                    f'\nCould not find document type 10K for {filing_metadata["filename"]}'
-                )
+            # if documents:
+            #     LOGGER.info(
+            #         f'\nCould not find document type 10K for {filing_metadata["filename"]}'
+            #     )
             # If no 10-K document is found, parse the entire content as HTML or plain text
             doc_10k = BeautifulSoup(content, "lxml")
             is_html = (True if doc_10k.find("td") else False) and (
@@ -767,7 +772,8 @@ class ExtractItems:
         # Initialize item sections as empty strings in the JSON content
         for item_index in self.items_to_extract:
             if item_index == "SIGNATURE":
-                json_content[f"{item_index}"] = ""
+                if self.include_signature:
+                    json_content[f"{item_index}"] = ""
             else:
                 json_content[f"item_{item_index}"] = ""
 
@@ -794,7 +800,8 @@ class ExtractItems:
 
             #Add the item section to the JSON content
             if item_index == "SIGNATURE":
-                json_content[f"{item_index}"] = item_section
+                if self.include_signature:
+                    json_content[f"{item_index}"] = item_section
             else:
                 json_content[f"item_{item_index}"] = item_section
 
@@ -871,10 +878,10 @@ def main() -> None:
         return
     
     #For debugging one document
-    # debug_file = "https://www.sec.gov/Archives/edgar/data/789019/000095017023035122/msft-20230630.htm"
-    # debug_file = "https://www.sec.gov/Archives/edgar/data/1318605/000156459023000002/tsla-8k_20230102.htm"
+    # debug_file = "https://www.sec.gov/Archives/edgar/data/1318605/000156459023005462/tsla-8k_20230330.htm"
+    # debug_file = "https://www.sec.gov/Archives/edgar/data/1048911/000095017023033201/fdx-20230531.htm"
     # filings_metadata_df = filings_metadata_df[filings_metadata_df["htm_file_link"] == debug_file]
-    # debug_file = "https://www.sec.gov/Archives/edgar/data/320193/000091205700002128/0000912057-00-002128.txt"
+    # debug_file = "https://www.sec.gov/Archives/edgar/data/1002682/000093905709000171/0000939057-09-000171.txt"
     # filings_metadata_df = filings_metadata_df[filings_metadata_df["complete_text_file_link"] == debug_file]
 
     raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
@@ -895,6 +902,7 @@ def main() -> None:
     extraction = ExtractItems(
         remove_tables=config["remove_tables"],
         items_to_extract=config["items_to_extract"],
+        include_signature=config["include_signature"],
         raw_files_folder=raw_filings_folder,
         extracted_files_folder=extracted_filings_folder,
         skip_extracted_filings=config["skip_extracted_filings"],
