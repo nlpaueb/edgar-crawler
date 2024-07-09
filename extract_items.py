@@ -1,3 +1,4 @@
+import bs4
 import click
 import cssutils
 import json
@@ -613,6 +614,144 @@ class ExtractItems:
                 break
 
         return item_section
+
+    @staticmethod
+    def find_background_color(tbl: bs4.element.Tag) -> bool:
+        trs = (
+            tbl.find_all("tr", attrs={"style": True})
+            + tbl.find_all("td", attrs={"style": True})
+            + tbl.find_all("th", attrs={"style": True})
+        )
+
+        background_found = False
+        for tr in trs:
+            # Parse given cssText which is assumed to be the content of a HTML style attribute
+            style = cssutils.parseStyle(tr["style"])
+            if (
+                style["background"]
+                and style["background"].lower()
+                not in ["none", "transparent", "#ffffff", "#fff", "white"]
+            ) or (
+                style["background-color"]
+                and style["background-color"].lower()
+                not in ["none", "transparent", "#ffffff", "#fff", "white"]
+            ):
+                background_found = True
+                break
+
+        return background_found
+
+    def retrieve_html_tables(self, doc: str, is_html: bool) -> list[pd.DataFrame]:
+        """
+        Retrieve all HTML tables that contain numerical data as pandas DataFrames.
+
+        Args:
+            doc: Some html document.
+            is_html: Whether the document contains html code or just plain text.
+
+        Returns:
+            pandas DataFrame containing numerical data.
+        """
+        dfs = []
+
+        if is_html:
+            tables = doc.find_all("table")
+
+            for tbl in tables:
+                if ExtractItems.find_background_color(tbl):
+                    table_data = []
+                    rows = tbl.find_all("tr")[1:]
+
+                    for row in rows:
+                        cols = [
+                            re.sub(r"[\$\*]", "", ele.text.strip())
+                            for ele in row.find_all("td")
+                        ]
+                        cols = list(filter(None, cols))
+                        tmp = []
+                        i = 0
+                        while i < len(cols):
+                            if i + 1 < len(cols) and (cols[i + 1] == '%' or cols[i + 1] == ')'):
+                                tmp.append(cols[i] + cols[i + 1])
+                                i += 2
+                            else:
+                                tmp.append(cols[i])
+                                i += 1
+                        cols = tmp
+
+                        if len(cols) > 1:
+                            table_data.append(cols)
+
+                    if table_data:
+                        cc = max(len(r) for r in table_data)
+                        table_data = [
+                            r if len(r) == cc else [""] * (cc - len(r)) + r
+                            for r in table_data
+                        ]
+                        dfs.append(pd.DataFrame(table_data[1:], columns=table_data[0]))
+
+        return dfs
+
+    def extract_tables(self, filing_metadata: Dict[str, Any]) -> list[pd.DataFrame]:
+        """
+        Extracts all tables for 10-K/10-Q files and returns it as a list of pandas DataFrames.
+
+        Args:
+            filing_metadata (Dict[str, Any]): a pandas series containing all filings metadata
+
+        Returns:
+            pandas DataFrame containing numerical data.
+        """
+        absolute_10k_filename = os.path.join(
+            self.raw_files_folder, filing_metadata["filename"]
+        )
+
+        # Read the content of the 10-K file
+        with open(absolute_10k_filename, "r", errors="backslashreplace") as file:
+            content = file.read()
+
+        # Remove all embedded pdfs that might be seen in few old 10-K txt annual reports
+        content = re.sub(r"<PDF>.*?</PDF>", "", content, flags=regex_flags)
+
+        # Find all <DOCUMENT> tags within the content
+        documents = re.findall("<DOCUMENT>.*?</DOCUMENT>", content, flags=regex_flags)
+
+        # Initialize variables
+        doc_10k = None
+        found_10k, is_html = False, False
+
+        # Find the 10-K document
+        for doc in documents:
+            # Find the <TYPE> tag within each <DOCUMENT> tag to identify the type of document
+            doc_type = re.search(r"\n[^\S\r\n]*<TYPE>(.*?)\n", doc, flags=regex_flags)
+            doc_type = doc_type.group(1) if doc_type else None
+
+            # Check if the document is a 10-K
+            if doc_type.startswith("10"):
+                # Check if the document is HTML or plain text
+                doc_10k = BeautifulSoup(doc, "lxml")
+                is_html = (True if doc_10k.find("td") else False) and (
+                    True if doc_10k.find("tr") else False
+                )
+                if not is_html:
+                    doc_10k = doc
+                found_10k = True
+                break
+
+        if not found_10k:
+            if documents:
+                LOGGER.info(
+                    f'\nCould not find document type 10K for {filing_metadata["filename"]}'
+                )
+            # If no 10-K document is found, parse the entire content as HTML or plain text
+            doc_10k = BeautifulSoup(content, "lxml")
+            is_html = (True if doc_10k.find("td") else False) and (
+                True if doc_10k.find("tr") else False
+            )
+            if not is_html:
+                doc_10k = content
+
+        return self.retrieve_html_tables(doc_10k, is_html)
 
     def extract_items(self, filing_metadata: Dict[str, Any]) -> Any:
         """
