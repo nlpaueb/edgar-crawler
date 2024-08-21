@@ -12,16 +12,21 @@ from extract_items import ExtractItems
 
 
 def extract_zip(input_zip):
+    if "RAW_FILINGS" in input_zip:
+        folder_name = "RAW_FILINGS"
+    elif "EXTRACTED_FILINGS" in input_zip:
+        folder_name = "EXTRACTED_FILINGS"
     zf = zipfile.ZipFile(input_zip)
-    zf.extractall(path=os.path.join("/tmp", "edgar_crawler"))
+    zf.extractall(path=os.path.join("/tmp", "edgar_crawler", folder_name))
 
 
 class Test(unittest.TestCase):
     def test_extract_items_10K(self):
-        extract_zip(os.path.join("tests", "fixtures", "RAW_FILINGS_10K.zip"))
-        extract_zip(os.path.join("tests", "fixtures", "EXTRACTED_FILINGS_10K.zip"))
+        extract_zip(os.path.join("tests", "fixtures", "RAW_FILINGS", "10-K.zip"))
+        extract_zip(os.path.join("tests", "fixtures", "EXTRACTED_FILINGS", "10-K.zip"))
 
-        filings_metadata_df = pd.read_csv(os.path.join("tests", "fixtures", "FILINGS_METADATA_TEST_10K.csv"), dtype=str)
+        filings_metadata_df = pd.read_csv(os.path.join("tests", "fixtures", "FILINGS_METADATA_TEST.csv"), dtype=str)
+        filings_metadata_df = filings_metadata_df[filings_metadata_df['Type'] == '10-K']
         filings_metadata_df = filings_metadata_df.replace({np.nan: None})
 
         extraction = ExtractItems(
@@ -32,7 +37,7 @@ class Test(unittest.TestCase):
                 "14", "15", "16", #"SIGNATURE"
             ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS_10K",
+            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/", #don't want 10-K here because this is added in extract_items.py
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -43,7 +48,7 @@ class Test(unittest.TestCase):
             extracted_filing = extraction.extract_items(filing_metadata)
 
             expected_filing_filepath = os.path.join(
-                "/tmp/edgar_crawler/EXTRACTED_FILINGS_10K",
+                "/tmp/edgar_crawler/EXTRACTED_FILINGS/10-K",
                 f"{filing_metadata['filename'].split('.')[0]}.json"
             )
             with open(expected_filing_filepath) as f:
@@ -72,10 +77,11 @@ class Test(unittest.TestCase):
             raise exception
     
     def test_extract_items_8K(self):
-        extract_zip(os.path.join("tests", "fixtures", "RAW_FILINGS_8K.zip"))
-        extract_zip(os.path.join("tests", "fixtures", "EXTRACTED_FILINGS_8K.zip"))
+        extract_zip(os.path.join("tests", "fixtures", "RAW_FILINGS", "8-K.zip"))
+        extract_zip(os.path.join("tests", "fixtures", "EXTRACTED_FILINGS", "8-K.zip"))
 
-        filings_metadata_df = pd.read_csv(os.path.join("tests", "fixtures", "FILINGS_METADATA_TEST_8K.csv"), dtype=str)
+        filings_metadata_df = pd.read_csv(os.path.join("tests", "fixtures", "FILINGS_METADATA_TEST.csv"), dtype=str)
+        filings_metadata_df = filings_metadata_df[filings_metadata_df['Type'] == '8-K']
         filings_metadata_df = filings_metadata_df.replace({np.nan: None})
 
         extraction_new = ExtractItems(
@@ -87,7 +93,7 @@ class Test(unittest.TestCase):
                 "9.01", #"SIGNATURE",
                 ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS_8K",
+            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -99,7 +105,7 @@ class Test(unittest.TestCase):
                 "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", #"SIGNATURE",
                 ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS_8K",
+            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -116,7 +122,7 @@ class Test(unittest.TestCase):
             extracted_filing = extraction.extract_items(filing_metadata)
 
             expected_filing_filepath = os.path.join(
-                "/tmp/edgar_crawler/EXTRACTED_FILINGS_8K",
+                "/tmp/edgar_crawler/EXTRACTED_FILINGS/8-K",
                 f"{filing_metadata['filename'].split('.')[0]}.json"
             )
             with open(expected_filing_filepath) as f:

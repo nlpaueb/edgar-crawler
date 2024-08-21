@@ -15,10 +15,10 @@
 		"raw_filings_folder": "RAW_FILINGS",
 		"extracted_filings_folder": "EXTRACTED_FILINGS",
 		"filings_metadata_file": "FILINGS_METADATA.csv",
-		"filing_types": ["8-K", "10-K"],
+		"filing_types": ["10-K", "8-K"],
 		"include_signature": false,
 		"items_to_extract": [],
-		"remove_tables": false,
-		"skip_extracted_filings": false
+		"remove_tables": true,
+		"skip_extracted_filings": true
 	}
 }

@@ -68,6 +68,11 @@ def main():
 		os.mkdir(indices_folder)
 	if not os.path.isdir(raw_filings_folder):
 		os.mkdir(raw_filings_folder)
+	# We also create subfolders for each filing type in the raw_filings_folder for better organization
+	for filing_type in config['filing_types']:
+		filing_type_folder = os.path.join(raw_filings_folder, filing_type)
+		if not os.path.isdir(filing_type_folder):
+			os.mkdir(filing_type_folder)
 
 	# If companies_info.json doesn't exist, create it with empty JSON
 	if not os.path.isfile(os.path.join(DATASET_DIR, 'companies_info.json')):
@@ -110,7 +115,7 @@ def main():
 
 		# Read the old filings metadata and filter out the filings that already exist in the download folder
 		for _, series in pd.read_csv(filings_metadata_filepath, dtype=str).iterrows():
-			if os.path.exists(os.path.join(raw_filings_folder, series['filename'])):
+			if os.path.exists(os.path.join(raw_filings_folder, series['Type'], series['filename'])):
 				old_df.append((series.to_frame()).T)
 
 		# Concatenate the old filings metadata
@@ -270,7 +275,7 @@ def get_specific_indices(
 
 	Args:
 		tsv_filenames (List[str]): The filenames of the indices.
-		filing_types (List[str]): The filing types to download, e.g., ['10-K', '10-K405', '10-KT'].
+		filing_types (List[str]): The filing types to download, e.g., ['10-K', '10-K405', '10-KT', '8-K'].
 		user_agent (str): The User-agent string that will be declared to SEC EDGAR.
 		cik_tickers (Optional[List[str]]): List of CIKs or Tickers. If None, the function processes all CIKs in the provided indices.
 
@@ -586,15 +591,16 @@ def crawl(
 
 			# If a valid link is available, initiate download
 			if link_to_download is not None:
-				filing_type = re.sub(r"[\-/\\]", '', filing_type)
+				#In the filename, we remove any special characters from the filing type
+				filing_type_name = re.sub(r"[\-/\\]", '', filing_type)
 				accession_num = os.path.splitext(os.path.basename(series['complete_text_file_link']))[0]
-				filename = f"{str(series['CIK'])}_{filing_type}_{period_of_report[:4]}_{accession_num}.{file_extension}"
+				filename = f"{str(series['CIK'])}_{filing_type_name}_{period_of_report[:4]}_{accession_num}.{file_extension}"
 
 				# Download the file
 				success = download(
 					url=link_to_download,
 					filename=filename,
-					download_folder=raw_filings_folder,
+					download_folder=os.path.join(raw_filings_folder, filing_type),
 					user_agent=user_agent
 				)
 				if success:

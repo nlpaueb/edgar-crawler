@@ -344,51 +344,28 @@ class ExtractItems:
 
         return non_blank_digits_percentage, spaces_percentage
 
-    def remove_html_tables(self, doc_10k: str, is_html: bool) -> str:
+    def remove_html_tables(self, doc_report: str, is_html: bool) -> str:
         """
         Remove HTML tables that contain numerical data
         Note that there are many corner-cases in the tables that have text data instead of numerical
 
         Args:
-                doc_10k (str): The 10-K html
+                doc_report (str): The report html
                 is_html (bool): Whether the document contains html code or just plain text
 
         Returns:
-                str: The 10-K html without numerical tables
+                str: The report html without numerical tables
         """
 
         if is_html:
-            tables = doc_10k.find_all("table")
-
-            items_list = []
-            for item_index in self.items_list:
-                # Modify the item index format for matching in the table
-                if item_index == "9A":
-                    item_index = item_index.replace("A", r"[^\S\r\n]*A(?:\(T\))?")
-                elif item_index == "SIGNATURE":
-                    pass
-                elif "A" in item_index:
-                    item_index = item_index.replace("A", r"[^\S\r\n]*A")
-                elif "B" in item_index:
-                    item_index = item_index.replace("B", r"[^\S\r\n]*B")
-                items_list.append(item_index)
-
+            tables = doc_report.find_all("table")
             # Detect tables that have numerical data
             for tbl in tables:
                 tbl_text = ExtractItems.clean_text(ExtractItems.strip_html(str(tbl)))
                 item_index_found = False
-                for item_index in items_list:
-                    # If the item is SIGNATURE, we don't want to look for ITEM
-                    if item_index == "SIGNATURE":
-                        # Some reports have SIGNATURES or Signature(s) instead of SIGNATURE
-                        item_index_pattern = rf"{item_index}(s|\(s\))?"
-                    else:
-                        if '.' in item_index:
-                            #We need to escape the '.', otherwise it will be treated as a special character
-                            escaped_item_index = item_index.replace('.', '\.')
-                            item_index_pattern = rf"ITEM\s*{escaped_item_index}"
-                        else:
-                            item_index_pattern = rf"ITEM\s*{item_index}"
+                for item_index in self.items_list:
+                    # Adjust the item index pattern
+                    item_index_pattern = self.adjust_item_patterns(item_index)
                     if (
                         len(
                             list(
@@ -456,9 +433,9 @@ class ExtractItems:
 
         else:
             # If the input is plain text, remove the table tags using regex
-            doc_10k = re.sub(r"<TABLE>.*?</TABLE>", "", str(doc_10k), flags=regex_flags)
+            doc_report = re.sub(r"<TABLE>.*?</TABLE>", "", str(doc_report), flags=regex_flags)
 
-        return doc_10k
+        return doc_report
 
     def handle_spans(self, doc: str, is_html) -> str:
         """The documents can contain different span types - some are used for formatting, others for margins.
@@ -516,29 +493,18 @@ class ExtractItems:
             doc = re.sub(vertical_margin_pattern, "\n", doc)
 
         return doc
-
-    def parse_item(
-        self,
-        text: str,
-        item_index: str,
-        next_item_list: List[str],
-        positions: List[int],
-    ) -> Tuple[str, List[int]]:
-        """
-        Parses the specified item/section in a 10-K text.
+    
+    def adjust_item_patterns(self, item_index: str) -> str:
+        '''
+        Adjust the item_pattern for matching in the document text depending on the item index.
+        This is necessary on a case by case basis.
 
         Args:
-                text (str): The 10-K text.
-                item_index (str): Number of the requested Item/Section of the 10-K text.
-                next_item_list (List[str]): List of possible next 10-K item sections.
-                positions (List[int]): List of the end positions of previous item sections.
-
+            item_index (str): The item index to adjust the pattern for.
+        
         Returns:
-                Tuple[str, List[int]]: The item/section as a text string and the updated end positions of item sections.
-        """
-
-        # Set the regex flags
-        regex_flags = re.IGNORECASE | re.DOTALL
+            item_index_pattern (str): The adjusted item pattern
+        '''
 
         # Create a regex pattern from the item index
         item_index_pattern = item_index
@@ -559,6 +525,10 @@ class ExtractItems:
             item_index_pattern = item_index_pattern.replace(
                 "B", r"[^\S\r\n]*B"
             )  # Regex pattern for "B" item indexes
+        elif "C" in item_index:
+            item_index_pattern = item_index_pattern.replace(
+                "C", r"[^\S\r\n]*C"
+            )  # Regex pattern for "C" item indexes
 
         # If the item is SIGNATURE, we don't want to look for ITEM
         if item_index == "SIGNATURE":
@@ -566,11 +536,39 @@ class ExtractItems:
             item_index_pattern = rf"{item_index}(s|\(s\))?"
         else:
             if '.' in item_index:
-                #We need to escape the '.', otherwise it will be treated as a special character
+                #We need to escape the '.', otherwise it will be treated as a special character - for 8Ks
                 escaped_item_index = item_index.replace('.', '\.')
                 item_index_pattern = rf"ITEM\s*{escaped_item_index}"
             else:
                 item_index_pattern = rf"ITEM\s*{item_index}"
+        
+        return item_index_pattern
+
+    def parse_item(
+        self,
+        text: str,
+        item_index: str,
+        next_item_list: List[str],
+        positions: List[int],
+    ) -> Tuple[str, List[int]]:
+        """
+        Parses the specified item/section in a report text.
+
+        Args:
+                text (str): The report text.
+                item_index (str): Number of the requested Item/Section of the report text.
+                next_item_list (List[str]): List of possible next report item sections.
+                positions (List[int]): List of the end positions of previous item sections.
+
+        Returns:
+                Tuple[str, List[int]]: The item/section as a text string and the updated end positions of item sections.
+        """
+
+        # Set the regex flags
+        regex_flags = re.IGNORECASE | re.DOTALL
+
+        # Adjust the item index pattern
+        item_index_pattern = self.adjust_item_patterns(item_index)
 
         # Depending on the item_index, search for subsequent sections.
         # There might be many 'candidate' text sections between 2 Items.
@@ -580,38 +578,12 @@ class ExtractItems:
         possible_sections_list = [] #possible list of (start, end) matches
         impossible_match = None     #list of matches where no possible section was found - (start, None) matches
         for next_item_index in next_item_list:
-            # Create a regex pattern from the next item index
-            next_item_index_pattern = next_item_index
             if possible_sections_list:
                 break
-            if next_item_index == "9A":
-                next_item_index_pattern = next_item_index_pattern.replace(
-                    "A", r"[^\S\r\n]*A(?:\(T\))?"
-                )  # Regex pattern for next_item_index "9A"
-            elif next_item_index == "SIGNATURE":
-                # So the A in SIGNATURE is not changed
-                pass
-            elif "A" in next_item_index:
-                next_item_index_pattern = next_item_index_pattern.replace(
-                    "A", r"[^\S\r\n]*A"
-                )  # Regex pattern for other "A" next_item_indexes
-            elif "B" in next_item_index:
-                next_item_index_pattern = next_item_index_pattern.replace(
-                    "B", r"[^\S\r\n]*B"
-                )  # Regex pattern for "B" next_item_indexes
 
-            # If the item is SIGNATURE, we don't want to look for ITEM
-            if next_item_index == "SIGNATURE":
-                # Some reports have SIGNATURES or Signature(s) instead of SIGNATURE
-                next_item_index_pattern = rf"{next_item_index}(s|\(s\))?"
-            else:
-                if '.' in next_item_index:
-                    #We need to escape the '.', otherwise it will be treated as a special character
-                    escaped_next_item_index = next_item_index.replace('.', '\.')
-                    next_item_index_pattern = rf"ITEM\s*{escaped_next_item_index}"
-                else:
-                    next_item_index_pattern = rf"ITEM\s*{next_item_index}"
-
+            # Adjust the next item index pattern
+            next_item_index_pattern = self.adjust_item_patterns(next_item_index)
+            
             # Find all the text sections between the current item and the next item
             for match in list(
                 re.finditer(
@@ -645,20 +617,22 @@ class ExtractItems:
         # If item is the last one (usual case when dealing with EDGAR's old .txt files), get all the text from its beginning until EOF.
         if positions:
             # If the item is the last one, get all the text from its beginning until EOF
+            # This is needed in cases where the SIGNATURE section cannot be found
             if item_index in self.items_list and item_section == "":
-                item_section = ExtractItems.get_last_item_section(
+                item_section = self.get_last_item_section(
                     item_index, text, positions
                 )
             # SIGNATURE is the last one, get all the text from its beginning until EOF
-            elif item_index == "SIGNATURE":
-                item_section = ExtractItems.get_last_item_section(
+            if item_index == "SIGNATURE":
+                item_section = self.get_last_item_section(
                     item_index, text, positions
                 )
         elif impossible_match:
-            #If there is only a single item in a report (can happen for 8-K reports), 'possible_sections_list' will always be empty
-            #But in this case we just want to extract from the match until the end of the document
+            # If there is only a single item in a report and no SIGNATURE (can happen for 8-K reports),
+            # 'possible_sections_list' and thus also 'positions' will always be empty.
+            # In this case we just want to extract from the match until the end of the document
             if item_index in self.items_list:
-                item_section = ExtractItems.get_last_item_section(
+                item_section = self.get_last_item_section(
                     item_index, text, positions
                 )
 
@@ -727,32 +701,23 @@ class ExtractItems:
 
         return item_section, positions
 
-    @staticmethod
-    def get_last_item_section(item_index: str, text: str, positions: List[int]) -> str:
+    def get_last_item_section(self, item_index: str, text: str, positions: List[int]) -> str:
         """
         Returns the text section starting through a given item. This is useful in cases where Item 15 is the last item
-        and there is no Item 16 to indicate its ending. Also, it is useful in cases like EDGAR's old .txt files
+        and there is no Item 16 to indicate its ending (for 10-K reports). Also, it is useful in cases like EDGAR's old .txt files
         (mostly before 2005), where there is no Item 15; thus, ITEM 14 is the last one there.
 
         Args:
-                item_index (str): The index of the item/section in the 10-K ('14' or '15')
-                text (str): The whole 10-K text
+                item_index (str): The index of the item/section in the report
+                text (str): The whole report text
                 positions (List[int]): List of the end positions of previous item sections
 
         Returns:
                 str: All the remaining text until the end, starting from the specified item_index
         """
 
-        # If the item is SIGNATURE, Signature(s) or SIGNATURES, we don't want to look for ITEM
-        if item_index == "SIGNATURE":
-            item_index_pattern = rf"{item_index}(s|\(s\))?"
-        else:
-            if '.' in item_index:
-                #We need to escape the '.', otherwise it will be treated as a special character
-                escaped_item_index = item_index.replace('.', '\.')
-                item_index_pattern = rf"ITEM\s*{escaped_item_index}"
-            else:
-                item_index_pattern = rf"ITEM\s*{item_index}"
+        # Adjust the item index pattern
+        item_index_pattern = self.adjust_item_patterns(item_index)
 
         # Find all occurrences of the item/section using regex
         item_list = list(
@@ -778,7 +743,7 @@ class ExtractItems:
 
     def extract_items(self, filing_metadata: Dict[str, Any]) -> Any:
         """
-        Extracts all items/sections for a 10-K file and writes it to a CIK_10K_YEAR.json file (eg. 1384400_10K_2017.json)
+        Extracts all items/sections for a file and writes it to a CIK_TYPE_YEAR.json file (eg. 1384400_10K_2017.json)
 
         Args:
                 filing_metadata (Dict[str, Any]): a pandas series containing all filings metadata
@@ -788,53 +753,54 @@ class ExtractItems:
         """
 
         absolute_filename = os.path.join(
-            self.raw_files_folder, filing_metadata["filename"]
+            self.raw_files_folder, filing_metadata["Type"], filing_metadata["filename"]
         )
 
-        # Read the content of the 10-K file
+        # Read the content of the file
         with open(absolute_filename, "r", errors="backslashreplace") as file:
             content = file.read()
 
-        # Remove all embedded pdfs that might be seen in few old 10-K txt annual reports
+        # Remove all embedded pdfs that might be seen in few old txt annual reports
         content = re.sub(r"<PDF>.*?</PDF>", "", content, flags=regex_flags)
 
         # Find all <DOCUMENT> tags within the content
         documents = re.findall("<DOCUMENT>.*?</DOCUMENT>", content, flags=regex_flags)
 
         # Initialize variables
-        doc_10k = None
-        found_10k, is_html = False, False
+        doc_report = None
+        found, is_html = False, False
 
-        # Find the 10-K document
+        # Find the document
         for doc in documents:
             # Find the <TYPE> tag within each <DOCUMENT> tag to identify the type of document
             doc_type = re.search(r"\n[^\S\r\n]*<TYPE>(.*?)\n", doc, flags=regex_flags)
             doc_type = doc_type.group(1) if doc_type else None
 
-            # Check if the document is a 10-K
-            if doc_type.startswith("10"):
-                # Check if the document is HTML or plain text
-                doc_10k = BeautifulSoup(doc, "lxml")
-                is_html = (True if doc_10k.find("td") else False) and (
-                    True if doc_10k.find("tr") else False
+            # Check if the document is an allowed document type
+            if doc_type.startswith(("10", "8")):
+            # For 10-K, 10-Q and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
+            # Check if the document is HTML or plain text
+                doc_report = BeautifulSoup(doc, "lxml")
+                is_html = (True if doc_report.find("td") else False) and (
+                    True if doc_report.find("tr") else False
                 )
                 if not is_html:
-                    doc_10k = doc
-                found_10k = True
-                break
+                    doc_report = doc
+                found = True
+                # break
 
-        if not found_10k:
-            # if documents:
-            #     LOGGER.info(
-            #         f'\nCould not find document type 10K for {filing_metadata["filename"]}'
-            #     )
-            # If no 10-K document is found, parse the entire content as HTML or plain text
-            doc_10k = BeautifulSoup(content, "lxml")
-            is_html = (True if doc_10k.find("td") else False) and (
-                True if doc_10k.find("tr") else False
+        if not found:
+            if documents:
+                LOGGER.info(
+                    f'\nCould not find documents for {filing_metadata["filename"]}'
+                )
+            # If no document is found, parse the entire content as HTML or plain text
+            doc_report = BeautifulSoup(content, "lxml")
+            is_html = (True if doc_report.find("td") else False) and (
+                True if doc_report.find("tr") else False
             )
             if not is_html:
-                doc_10k = content
+                doc_report = content
 
         # Check if the document is plain text without <DOCUMENT> tags (e.g., old TXT format)
         if filing_metadata["filename"].endswith("txt") and not documents:
@@ -842,10 +808,10 @@ class ExtractItems:
 
         # For non-HTML documents, clean all table items
         if self.remove_tables:
-            doc_10k = self.remove_html_tables(doc_10k, is_html=is_html)
+            doc_report = self.remove_html_tables(doc_report, is_html=is_html)
 
         # Detect span elements and handle them depending on span type
-        doc_10k = self.handle_spans(doc_10k, is_html=is_html)
+        doc_report = self.handle_spans(doc_report, is_html=is_html)
 
         # Prepare the JSON content with filing metadata
         json_content = {
@@ -873,7 +839,7 @@ class ExtractItems:
                 json_content[f"item_{item_index}"] = ""
 
         # Extract the text from the document and clean it
-        text = ExtractItems.strip_html(str(doc_10k))
+        text = ExtractItems.strip_html(str(doc_report))
         text = ExtractItems.clean_text(text)
 
         positions = []
@@ -925,7 +891,7 @@ class ExtractItems:
 
         # Create the absolute path for the JSON file
         absolute_json_filename = os.path.join(
-            self.extracted_files_folder, json_filename
+            self.extracted_files_folder, filing_metadata["Type"], json_filename
         )
 
         # Skip processing if the extracted JSON file already exists and skip flag is enabled
@@ -935,6 +901,9 @@ class ExtractItems:
         # Extract items from the filing
         json_content = self.extract_items(filing_metadata)
 
+        # First, Check if the filing type specific folder exists and create it if it doesn't
+        if not os.path.isdir(os.path.join(self.extracted_files_folder, filing_metadata["Type"])):
+            os.mkdir(os.path.join(self.extracted_files_folder, filing_metadata["Type"]))
         # Write the JSON content to the file if it's not None
         if json_content is not None:
             with open(absolute_json_filename, "w", encoding="utf-8") as filepath:
@@ -945,7 +914,7 @@ class ExtractItems:
 
 def main() -> None:
     """
-    Gets the list of 10K files and extracts all textual items/sections by calling the extract_items() function.
+    Gets the list of supported (10K, 8K, 10Q) files and extracts all textual items/sections by calling the extract_items() function.
     """
 
     with open("config.json") as fin:
@@ -973,7 +942,7 @@ def main() -> None:
         return
 
     # For debugging one report
-    # debug_file_name = "1001039_8K_2014_0001001039-14-000215.htm"
+    # debug_file_name = "1002517_10K_2018_0001002517-18-000064.htm"
     # filings_metadata_df = filings_metadata_df[filings_metadata_df["filename"] == debug_file_name]
 
     raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
