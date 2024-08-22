@@ -5,7 +5,7 @@
 		"quarters": [1, 2, 3, 4],
 		"filing_types": ["10-K", "8-K"],
 		"cik_tickers": ["AAPL"],
-		"user_agent": "",
+		"user_agent": "Your name (your email)",
 		"raw_filings_folder": "RAW_FILINGS",
 		"indices_folder": "INDICES",
 		"filings_metadata_file": "FILINGS_METADATA.csv",
