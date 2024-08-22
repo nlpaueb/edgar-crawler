@@ -596,7 +596,7 @@ class ExtractItems:
 
                 possible = list(
                     re.finditer(
-                        rf"\n[^\S\r\n]*ITEM\s+{item_index}[.*~\-:\s].+?(\n[^\S\r\n]*ITEM\s+{str(next_item_index)}[.*~\-:\s])",
+                        rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s\()].+?(\n[^\S\r\n]*{str(next_item_index_pattern)}[.*~\-:\s\(])",
                         text[offset:],
                         flags=regex_flags,
                     )
