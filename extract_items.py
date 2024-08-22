@@ -15,7 +15,7 @@ from pathos.pools import ProcessPool
 from tqdm import tqdm
 
 from __init__ import DATASET_DIR
-from item_lists import item_list_8k, item_list_8k_obsolete, item_list_10k, item_list_10q
+from item_lists import item_list_8k, item_list_8k_obsolete, item_list_10k
 from logger import Logger
 
 # Change the default recursion limit of 1000 to 30000
@@ -150,9 +150,6 @@ class ExtractItems:
                 items_list = item_list_8k
             else:
                 items_list = item_list_8k_obsolete
-        elif filing_metadata["Type"] == "10-Q":
-            # TODO: this needs to be updated since we need to use a dict for this "items_list"
-            items_list = item_list_10q
         else:
             raise Exception(
                 f"Unsupported filing type: {filing_metadata['Type']}. No items_list defined."
@@ -778,7 +775,7 @@ class ExtractItems:
 
             # Check if the document is an allowed document type
             if doc_type.startswith(("10", "8")):
-            # For 10-K, 10-Q and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
+            # For 10-K and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
             # Check if the document is HTML or plain text
                 doc_report = BeautifulSoup(doc, "lxml")
                 is_html = (True if doc_report.find("td") else False) and (
@@ -914,7 +911,7 @@ class ExtractItems:
 
 def main() -> None:
     """
-    Gets the list of supported (10K, 8K, 10Q) files and extracts all textual items/sections by calling the extract_items() function.
+    Gets the list of supported (10K, 8K) files and extracts all textual items/sections by calling the extract_items() function.
     """
 
     with open("config.json") as fin:

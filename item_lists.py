@@ -1,6 +1,6 @@
 '''
-Description: This file contains hard-coded lists of items for 10-K, 8-K, and an dictionary for 10-Q filings.
-In the case of 10-Q filings, the items are divided into two parts: part_1 and part_2. 
+Description: This file contains hard-coded lists of items for 10-K and 8-K reports.
+For 8-K reports we also need a secondary list for obsolete (older) reports since the item names were changed.
 '''
 
 
@@ -80,22 +80,3 @@ item_list_8k_obsolete = [
     "12",
     "SIGNATURE",
 ]
-
-item_list_10q = {
-    "part_1": [
-        "1",
-        "2",
-        "3",
-        "4",
-    ],
-    "part_2": [
-        "1",
-        "1A",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "SIGNATURE",
-    ]
-}
