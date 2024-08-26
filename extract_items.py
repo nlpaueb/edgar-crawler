@@ -856,12 +856,12 @@ class ExtractItems:
                 if item_section != "":
                     all_items_null = False
 
-            # Add the item section to the JSON content
-            if item_index == "SIGNATURE":
-                if self.include_signature:
-                    json_content[f"{item_index}"] = item_section
-            else:
-                json_content[f"item_{item_index}"] = item_section
+                # Add the item section to the JSON content
+                if item_index == "SIGNATURE":
+                    if self.include_signature:
+                        json_content[f"{item_index}"] = item_section
+                else:
+                    json_content[f"item_{item_index}"] = item_section
 
         if all_items_null:
             LOGGER.info(f"\nCould not extract any item for {absolute_filename}")
@@ -939,7 +939,7 @@ def main() -> None:
         return
 
     # For debugging one report
-    # debug_file_name = "1002517_10K_2018_0001002517-18-000064.htm"
+    # debug_file_name = "320193_10K_2022_0000320193-22-000108.htm"
     # filings_metadata_df = filings_metadata_df[filings_metadata_df["filename"] == debug_file_name]
 
     raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
@@ -956,7 +956,7 @@ def main() -> None:
     # Create the extracted filings folder if it doesn't exist
     if not os.path.isdir(extracted_filings_folder):
         os.mkdir(extracted_filings_folder)
-
+    
     extraction = ExtractItems(
         remove_tables=config["remove_tables"],
         items_to_extract=config["items_to_extract"],

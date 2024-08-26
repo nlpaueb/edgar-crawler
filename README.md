@@ -10,7 +10,7 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
 ### `EDGAR-CRAWLER` has 2 core modules:
 📥🕷️ Business Documents Crawling: Utilize the power of the `edgar_crawler.py` module to effortlessly crawl and download financial reports for every publicly-traded company within your specified years.
 
-🔍📑 Item Extraction: Extract and clean specific text sections such as Risk Factors or Management's Discussion & Analysis from 10-K documents (annual reports) using the `extract_items.py` module. Get straight to the heart of the information that matters most.
+🔍📑 Item Extraction: Extract and clean specific text sections such as Risk Factors or Management's Discussion & Analysis from 10-K documents (annual reports) and 8-K documents (current reports) using the `extract_items.py` module. Get straight to the heart of the information that matters most.
 
 ## Who Can Benefit from `EDGAR-CRAWLER`?
 📚 Academics: Enhance your NLP research in economics & finance or business management by accessing and analyzing financial data efficiently.
@@ -46,7 +46,7 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
       - `start_year XXXX`: the year range to start from (default is 2021).
       - `end_year YYYY`: the year range to end to (default is 2021).
       - `quarters`: the quarters that you want to download filings from (List).<br> Default value is: `[1, 2, 3, 4]`.
-      - `filing_types`: list of filing types to download.<br> Default value is: `['10-K', '10-K405', '10-KT']`.
+      - `filing_types`: list of filing types to download.<br> Default value is: `['10-K', '10-K405', '10-KT', '8-K']`.
       - `cik_tickers`: list or path of file containing CIKs or Tickers. e.g. `[789019, "1018724", "AAPL", "TWTR"]` <br>
         In case of file, provide each CIK or Ticker in a different line.  <br>
       If this argument is not provided, then the toolkit will download annual reports for all the U.S. publicly traded companies.
@@ -55,19 +55,21 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
       - `indices_folder`: the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
       - `filings_metadata_file`: CSV filename to save metadata from the reports.
       - `skip_present_indices`: Whether to skip already downloaded EDGAR indices or download them nonetheless.<br> Default value is `True`.
-  - Arguments for `extract_items.py`, the module to clean and extract textual data from already-downloaded 10-K reports:
+  - Arguments for `extract_items.py`, the module to clean and extract textual data from already-downloaded reports:
     - `raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
     - `extracted_filings_folder`: the name of the folder where extracted documents will be stored.<br> Default value is `'EXTRACTED_FILINGS'`.<br> For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
     - `filings_metadata_file`: CSV filename to load reports metadata (Provide the same csv file as in `edgar_crawler.py`).
+    - `filing_types`: list of filing types to extract.
+    - `include_signature`: Whether to include the signature section after the last item or not.
     - `items_to_extract`: a list with the certain item sections to extract. <br>
-      e.g. `['7','8']` to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items.<br>
-      The default list contains all item sections.
+      e.g. `['7','8']` to extract 'Management’s Discussion and Analysis' and 'Financial Statements' section items for 10-K reports.<br>
+      By default this list is empty in which case all items are extracted.
     - `remove_tables`: Whether to remove tables containing mostly numerical (financial) data. This work is mostly to facilitate NLP research where, often, numerical tables are not useful.
     - `skip_extracted_filings`: Whether to skip already extracted filings or extract them nonetheless.<br> Default value is `True`.
 
 - To download financial reports from EDGAR, run `python edgar_crawler.py`.
-- To clean and extract specific item sections from already-downloaded 10-K documents, run `python extract_items.py`.
-  - Reminder: We currently support the extraction of 10-K documents. 
+- To clean and extract specific item sections from already-downloaded documents, run `python extract_items.py`.
+  - Reminder: We currently support the extraction of 10-K and 8-K documents. 
 
 ## Citation
 An EDGAR-CRAWLER paper is on its way. Until then, please cite the relevant EDGAR-CORPUS paper published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic):
