@@ -32,9 +32,9 @@ class Test(unittest.TestCase):
         extraction = ExtractItems(
             remove_tables=True,
             items_to_extract=[
-                "1", "1A", "1B", "2", "3", "4", "5", "6", "7", "7A",
-                "8", "9", "9A", "9B", "9C", "10", "11", "12", "13",
-                "14", "15", "16", #"SIGNATURE"
+                "1", "1A", "1B", "1C", "2", "3", "4", "5", "6", "7",
+                "7A", "8", "9", "9A", "9B", "9C", "10", "11", "12",
+                "13", "14", "15", "16", #"SIGNATURE"
             ],
             include_signature=False,
             raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/", #don't want 10-K here because this is added in extract_items.py
@@ -62,6 +62,8 @@ class Test(unittest.TestCase):
                     current_item = 'SIGNATURE'
                 else:
                     current_item = f'item_{item}'
+                if current_item not in expected_filing:
+                    expected_filing[current_item] = ""
                 item_correct_dict[current_item] = extracted_filing[current_item] == expected_filing[current_item]
 
             try:
@@ -87,10 +89,10 @@ class Test(unittest.TestCase):
         extraction_new = ExtractItems(
             remove_tables=True,
             items_to_extract=[
-                "1.01", "1.02", "1.03", "1.04", "2.01", "2.02", "2.03", "2.04", "2.05", "2.06",
-                "3.01", "3.02", "3.03", "4.01", "4.02", "5.01", "5.02", "5.03", "5.04", "5.05",
-                "5.06", "5.07", "5.08", "6.01", "6.02", "6.03", "6.04", "6.05", "7.01", "8.01",
-                "9.01", #"SIGNATURE",
+                "1.01", "1.02", "1.03", "1.04", "1.05", "2.01", "2.02", "2.03", "2.04", "2.05",
+                "2.06", "3.01", "3.02", "3.03", "4.01", "4.02", "5.01", "5.02", "5.03", "5.04",
+                "5.05", "5.06", "5.07", "5.08", "6.01", "6.02", "6.03", "6.04", "6.05", "7.01",
+                "8.01", "9.01", #"SIGNATURE",
                 ],
             include_signature=False,
             raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",
@@ -136,6 +138,8 @@ class Test(unittest.TestCase):
                     current_item = 'SIGNATURE'
                 else:
                     current_item = f'item_{item}'
+                if current_item not in expected_filing:
+                    expected_filing[current_item] = ""
                 item_correct_dict[current_item] = extracted_filing[current_item] == expected_filing[current_item]
 
             try:
