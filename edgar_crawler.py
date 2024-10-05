@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import re
+import shutil
 import tempfile
 import zipfile
 from datetime import datetime
@@ -175,7 +176,7 @@ def main():
     for i in range(len(df)):
         list_of_series.append(df.iloc[i])
 
-    LOGGER.info(f"\nDownloading {len(df)} filings...\n")
+    LOGGER.info(f"\nDownloading {len(df)} filings directly from EDGAR...\n")
 
     # Initialize list for final series
     final_series = []
@@ -187,20 +188,33 @@ def main():
             raw_filings_folder=raw_filings_folder,
             user_agent=config["user_agent"],
         )
+
         # If the series was successfully downloaded, append it to the final series
         if series is not None:
             final_series.append((series.to_frame()).T)
-
             # Concatenate the final series and export it to the metadata file
             final_df = (
                 pd.concat(final_series) if (len(final_series) > 1) else final_series[0]
             )
             if len(old_df) > 0:
                 final_df = pd.concat([old_df, final_df])
-            final_df.to_csv(filings_metadata_filepath, index=False, header=True)
+
+            # Write to a temporary file first, in order to avoid possible data loss (issue #19)
+            temp_filepath = f"{filings_metadata_filepath}.tmp"
+            try:
+                final_df.to_csv(temp_filepath, index=False, header=True)
+
+                # Move the temporary file to the final file
+                shutil.move(temp_filepath, filings_metadata_filepath)
+            except KeyboardInterrupt:
+                final_df.to_csv(temp_filepath, index=False, header=True)
+                shutil.move(temp_filepath, filings_metadata_filepath)
+                LOGGER.info(
+                    f"Keyboard interrupt by the user detected (Ctrl + C). Saving filings metadata to {filings_metadata_filepath} and exiting."
+                )
+                exit(0)
 
     LOGGER.info(f"\nFilings metadata exported to {filings_metadata_filepath}")
-
     # If some filings failed to download, notify to rerun the script
     if len(final_series) < len(list_of_series):
         LOGGER.info(
