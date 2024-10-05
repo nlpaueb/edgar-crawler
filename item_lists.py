@@ -1,8 +1,8 @@
-'''
+"""
 Description: This file contains hard-coded lists of items for 10-K and 8-K reports.
-For 8-K reports we also need a secondary list for obsolete (older) reports since the item names were changed.
-'''
 
+For 8-K reports, we also need a secondary list for obsolete (older) reports since the item names were changed.
+"""
 
 item_list_10k = [
     "1",
