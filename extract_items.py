@@ -65,7 +65,7 @@ class HtmlStripper(HTMLParser):
         this class, we just append the data to the fed list.
 
         Args:
-                data (str): The data encountered.
+            data (str): The data encountered.
         """
         self.fed.append(data)
 
@@ -74,7 +74,7 @@ class HtmlStripper(HTMLParser):
         Join the list to get the data without HTML tags.
 
         Returns:
-                str: The data as a single string.
+            str: The data as a single string.
         """
         return "".join(self.fed)
 
@@ -86,10 +86,10 @@ class HtmlStripper(HTMLParser):
         HTML tags.
 
         Args:
-                html (str): The HTML string.
+            html (str): The HTML string.
 
         Returns:
-                str: The string without HTML tags.
+            str: The string without HTML tags.
         """
         self.feed(html)
         return self.get_data()
@@ -100,12 +100,12 @@ class ExtractItems:
     A class used to extract certain items from the raw files.
 
     Attributes:
-            remove_tables (bool): Flag to indicate if tables need to be removed.
-            items_list (List[str]): List of all items that could be extracted.
-            items_to_extract (List[str]): List of items to be extracted. If not provided, all items will be extracted.
-            raw_files_folder (str): Path of the directory containing raw files.
-            extracted_files_folder (str): Path of the directory to save the extracted files.
-            skip_extracted_filings (bool): Flag to indicate if already extracted filings should be skipped.
+        remove_tables (bool): Flag to indicate if tables need to be removed.
+        items_list (List[str]): List of all items that could be extracted.
+        items_to_extract (List[str]): List of items to be extracted. If not provided, all items will be extracted.
+        raw_files_folder (str): Path of the directory containing raw files.
+        extracted_files_folder (str): Path of the directory to save the extracted files.
+        skip_extracted_filings (bool): Flag to indicate if already extracted filings should be skipped.
     """
 
     def __init__(
@@ -121,12 +121,13 @@ class ExtractItems:
         Constructs all the necessary attributes for the ExtractItems object.
 
         Args:
-                remove_tables (bool): Whether to remove tables.
-                items_to_extract (List[str]): Items to be extracted. If None, all items are extracted.
-                raw_files_folder (str): Path of the folder containing raw files.
-                extracted_files_folder (str): Path of the folder where extracted files should be saved.
-                skip_extracted_filings (bool): Whether to skip already extracted filings.
+            remove_tables (bool): Whether to remove tables.
+            items_to_extract (List[str]): Items to be extracted. If None, all items are extracted.
+            raw_files_folder (str): Path of the folder containing raw files.
+            extracted_files_folder (str): Path of the folder where extracted files should be saved.
+            skip_extracted_filings (bool): Whether to skip already extracted filings.
         """
+
         self.remove_tables = remove_tables
         # Default list of items to extract
         self.items_to_extract = items_to_extract
@@ -177,10 +178,10 @@ class ExtractItems:
         Strip the HTML tags from the HTML content.
 
         Args:
-                html_content (str): The HTML content.
+            html_content (str): The HTML content.
 
         Returns:
-                str: The stripped HTML content.
+            str: The stripped HTML content.
         """
         # Replace closing tags of certain elements with two newline characters
         html_content = re.sub(r"(<\s*/\s*(div|tr|p|li|)\s*>)", r"\1\n\n", html_content)
@@ -199,10 +200,10 @@ class ExtractItems:
         Replace consecutive new lines and spaces with a single new line or space.
 
         Args:
-                text (str): The string containing the text.
+            text (str): The string containing the text.
 
         Returns:
-                str: The string without multiple new lines or spaces.
+            str: The string without multiple new lines or spaces.
         """
         # Replace multiple new lines and spaces with a temporary token
         text = re.sub(r"(( )*\n( )*){2,}", "#NEWLINE", text)
@@ -221,10 +222,10 @@ class ExtractItems:
         Clean the text by removing unnecessary blocks of text and substituting special characters.
 
         Args:
-                text (str): The raw text string.
+            text (str): The raw text string.
 
         Returns:
-                str: The normalized, clean text.
+            str: The normalized, clean text.
         """
         # Replace special characters with their corresponding substitutions
         text = re.sub(r"[\xa0]", " ", text)
@@ -311,10 +312,10 @@ class ExtractItems:
         Calculate character type percentages contained in the table text
 
         Args:
-                table_text (str): The table text
+            table_text (str): The table text
 
         Returns:
-                Tuple[float, float]: Percentage of non-blank digit characters, Percentage of space characters
+            Tuple[float, float]: Percentage of non-blank digit characters, Percentage of space characters
         """
         digits = sum(
             c.isdigit() for c in table_text
@@ -347,11 +348,11 @@ class ExtractItems:
         Note that there are many corner-cases in the tables that have text data instead of numerical
 
         Args:
-                doc_report (str): The report html
-                is_html (bool): Whether the document contains html code or just plain text
+            doc_report (str): The report html
+            is_html (bool): Whether the document contains html code or just plain text
 
         Returns:
-                str: The report html without numerical tables
+            str: The report html without numerical tables
         """
 
         if is_html:
@@ -430,7 +431,9 @@ class ExtractItems:
 
         else:
             # If the input is plain text, remove the table tags using regex
-            doc_report = re.sub(r"<TABLE>.*?</TABLE>", "", str(doc_report), flags=regex_flags)
+            doc_report = re.sub(
+                r"<TABLE>.*?</TABLE>", "", str(doc_report), flags=regex_flags
+            )
 
         return doc_report
 
@@ -446,7 +449,7 @@ class ExtractItems:
         Returns:
             doc (str): The document with spans handled depending on span type
         _______________________________________________________________
-        
+
         Example for a span with horizontal margin (between the item and the title of the item):
             Input:  Item\xa05.03<span style="font-weight:normal;margin-left:36pt;"></span><span style="color:#000000;">
                     Amendments to Articles of Incorporation or Bylaws
@@ -490,18 +493,17 @@ class ExtractItems:
             doc = re.sub(vertical_margin_pattern, "\n", doc)
 
         return doc
-    
+
     def adjust_item_patterns(self, item_index: str) -> str:
-        '''
-        Adjust the item_pattern for matching in the document text depending on the item index.
-        This is necessary on a case by case basis.
+        """
+        Adjust the item_pattern for matching in the document text depending on the item index. This is necessary on a case by case basis.
 
         Args:
             item_index (str): The item index to adjust the pattern for.
-        
+
         Returns:
             item_index_pattern (str): The adjusted item pattern
-        '''
+        """
 
         # Create a regex pattern from the item index
         item_index_pattern = item_index
@@ -532,13 +534,13 @@ class ExtractItems:
             # Some reports have SIGNATURES or Signature(s) instead of SIGNATURE
             item_index_pattern = rf"{item_index}(s|\(s\))?"
         else:
-            if '.' in item_index:
-                #We need to escape the '.', otherwise it will be treated as a special character - for 8Ks
-                escaped_item_index = item_index.replace('.', '\.')
+            if "." in item_index:
+                # We need to escape the '.', otherwise it will be treated as a special character - for 8Ks
+                escaped_item_index = item_index.replace(".", "\.")
                 item_index_pattern = rf"ITEM\s*{escaped_item_index}"
             else:
                 item_index_pattern = rf"ITEM\s*{item_index}"
-        
+
         return item_index_pattern
 
     def parse_item(
@@ -552,13 +554,13 @@ class ExtractItems:
         Parses the specified item/section in a report text.
 
         Args:
-                text (str): The report text.
-                item_index (str): Number of the requested Item/Section of the report text.
-                next_item_list (List[str]): List of possible next report item sections.
-                positions (List[int]): List of the end positions of previous item sections.
+            text (str): The report text.
+            item_index (str): Number of the requested Item/Section of the report text.
+            next_item_list (List[str]): List of possible next report item sections.
+            positions (List[int]): List of the end positions of previous item sections.
 
         Returns:
-                Tuple[str, List[int]]: The item/section as a text string and the updated end positions of item sections.
+            Tuple[str, List[int]]: The item/section as a text string and the updated end positions of item sections.
         """
 
         # Set the regex flags
@@ -572,15 +574,15 @@ class ExtractItems:
         # For example, the Table of Contents (ToC) still counts as a match when searching text between 'Item 3' and 'Item 4'
         # But we do NOT want that specific text section; We want the detailed section which is *after* the ToC
 
-        possible_sections_list = [] #possible list of (start, end) matches
-        impossible_match = None     #list of matches where no possible section was found - (start, None) matches
+        possible_sections_list = []  # possible list of (start, end) matches
+        impossible_match = None  # list of matches where no possible section was found - (start, None) matches
         for next_item_index in next_item_list:
             if possible_sections_list:
                 break
 
             # Adjust the next item index pattern
             next_item_index_pattern = self.adjust_item_patterns(next_item_index)
-            
+
             # Find all the text sections between the current item and the next item
             for match in list(
                 re.finditer(
@@ -602,8 +604,12 @@ class ExtractItems:
                 # If there is a match, add it to the list of possible sections
                 if possible:
                     possible_sections_list += [(offset, possible)]
-                elif next_item_index == next_item_list[-1] and not possible_sections_list and match:
-                    #If there is no (start, end) section, there might only be a single item in the report (can happen for 8-K)
+                elif (
+                    next_item_index == next_item_list[-1]
+                    and not possible_sections_list
+                    and match
+                ):
+                    # If there is no (start, end) section, there might only be a single item in the report (can happen for 8-K)
                     impossible_match = match
 
         # Extract the wanted section from the text
@@ -616,22 +622,16 @@ class ExtractItems:
             # If the item is the last one, get all the text from its beginning until EOF
             # This is needed in cases where the SIGNATURE section cannot be found
             if item_index in self.items_list and item_section == "":
-                item_section = self.get_last_item_section(
-                    item_index, text, positions
-                )
+                item_section = self.get_last_item_section(item_index, text, positions)
             # SIGNATURE is the last one, get all the text from its beginning until EOF
             if item_index == "SIGNATURE":
-                item_section = self.get_last_item_section(
-                    item_index, text, positions
-                )
+                item_section = self.get_last_item_section(item_index, text, positions)
         elif impossible_match:
             # If there is only a single item in a report and no SIGNATURE (can happen for 8-K reports),
             # 'possible_sections_list' and thus also 'positions' will always be empty.
             # In this case we just want to extract from the match until the end of the document
             if item_index in self.items_list:
-                item_section = self.get_last_item_section(
-                    item_index, text, positions
-                )
+                item_section = self.get_last_item_section(item_index, text, positions)
 
         return item_section.strip(), positions
 
@@ -645,12 +645,12 @@ class ExtractItems:
         Returns the correct section from a list of all possible item sections.
 
         Args:
-                possible_sections_list: List containing all the possible sections between Item X and Item Y.
-                text: The whole text.
-                positions: List of the end positions of previous item sections.
+            possible_sections_list: List containing all the possible sections between Item X and Item Y.
+            text: The whole text.
+            positions: List of the end positions of previous item sections.
 
         Returns:
-                Tuple[str, List[int]]: The correct section and the updated list of end positions.
+            Tuple[str, List[int]]: The correct section and the updated list of end positions.
         """
 
         # Initialize variables
@@ -698,19 +698,21 @@ class ExtractItems:
 
         return item_section, positions
 
-    def get_last_item_section(self, item_index: str, text: str, positions: List[int]) -> str:
+    def get_last_item_section(
+        self, item_index: str, text: str, positions: List[int]
+    ) -> str:
         """
         Returns the text section starting through a given item. This is useful in cases where Item 15 is the last item
         and there is no Item 16 to indicate its ending (for 10-K reports). Also, it is useful in cases like EDGAR's old .txt files
         (mostly before 2005), where there is no Item 15; thus, ITEM 14 is the last one there.
 
         Args:
-                item_index (str): The index of the item/section in the report
-                text (str): The whole report text
-                positions (List[int]): List of the end positions of previous item sections
+            item_index (str): The index of the item/section in the report
+            text (str): The whole report text
+            positions (List[int]): List of the end positions of previous item sections
 
         Returns:
-                str: All the remaining text until the end, starting from the specified item_index
+            str: All the remaining text until the end, starting from the specified item_index
         """
 
         # Adjust the item index pattern
@@ -743,10 +745,10 @@ class ExtractItems:
         Extracts all items/sections for a file and writes it to a CIK_TYPE_YEAR.json file (eg. 1384400_10K_2017.json)
 
         Args:
-                filing_metadata (Dict[str, Any]): a pandas series containing all filings metadata
+            filing_metadata (Dict[str, Any]): a pandas series containing all filings metadata
 
         Returns:
-                Any: The extracted JSON content
+            Any: The extracted JSON content
         """
 
         absolute_filename = os.path.join(
@@ -775,8 +777,8 @@ class ExtractItems:
 
             # Check if the document is an allowed document type
             if doc_type.startswith(("10", "8")):
-            # For 10-K and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
-            # Check if the document is HTML or plain text
+                # For 10-K and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
+                # Check if the document is HTML or plain text
                 doc_report = BeautifulSoup(doc, "lxml")
                 is_html = (True if doc_report.find("td") else False) and (
                     True if doc_report.find("tr") else False
@@ -874,10 +876,10 @@ class ExtractItems:
         Process a filing by extracting items/sections and saving the content to a JSON file.
 
         Args:
-                filing_metadata (Dict[str, Any]): A dictionary containing the filing metadata.
+            filing_metadata (Dict[str, Any]): A dictionary containing the filing metadata.
 
         Returns:
-                int: 0 if the processing is skipped, 1 if the processing is performed.
+            int: 0 if the processing is skipped, 1 if the processing is performed.
         """
 
         # Generate the JSON filename based on the original filename
@@ -899,7 +901,9 @@ class ExtractItems:
         json_content = self.extract_items(filing_metadata)
 
         # First, Check if the filing type specific folder exists and create it if it doesn't
-        if not os.path.isdir(os.path.join(self.extracted_files_folder, filing_metadata["Type"])):
+        if not os.path.isdir(
+            os.path.join(self.extracted_files_folder, filing_metadata["Type"])
+        ):
             os.mkdir(os.path.join(self.extracted_files_folder, filing_metadata["Type"]))
         # Write the JSON content to the file if it's not None
         if json_content is not None:
@@ -956,7 +960,7 @@ def main() -> None:
     # Create the extracted filings folder if it doesn't exist
     if not os.path.isdir(extracted_filings_folder):
         os.mkdir(extracted_filings_folder)
-    
+
     extraction = ExtractItems(
         remove_tables=config["remove_tables"],
         items_to_extract=config["items_to_extract"],
@@ -966,7 +970,9 @@ def main() -> None:
         skip_extracted_filings=config["skip_extracted_filings"],
     )
 
-    LOGGER.info("Starting extraction...\n")
+    LOGGER.info(
+        f"Starting the JSON extraction from {len(filings_metadata_df)} unstructured EDGAR filings."
+    )
 
     list_of_series = list(zip(*filings_metadata_df.iterrows()))[1]
 
