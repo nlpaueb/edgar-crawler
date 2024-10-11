@@ -170,7 +170,7 @@ class TestExtractItems(unittest.TestCase):
                     current_item = "SIGNATURE"
                 else:
                     # special naming convention for 10-Qs
-                    current_item = f"{item.split('__')[0]}__item_{item.split('__')[1]}"
+                    current_item = f"{item.split('__')[0]}_item_{item.split('__')[1]}"
                 if current_item not in expected_filing:
                     expected_filing[current_item] = ""
 

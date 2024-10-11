@@ -1127,7 +1127,7 @@ class ExtractItems:
                         # special naming convention for 10-Qs
                         json_content[
                             item_index.split("__")[0]
-                            + "__item_"
+                            + "_item_"
                             + item_index.split("__")[1]
                         ] = item_section
                         # In some cases, we find different parts, but no items in the part
