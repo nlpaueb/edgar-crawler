@@ -362,7 +362,7 @@ def get_specific_indices(
                     ]
             else:
                 # If it is not a valid filepath, log the error and exit
-                LOGGER.debug("Please provide a valid cik_ticker file path")
+                LOGGER.error("Please provide a valid cik_ticker file path")
                 exit()
 
     # Check if cik_tickers is a list and not empty
@@ -408,7 +408,7 @@ def get_specific_indices(
                     ciks.append(str(ticker2cik[c_t]))
                 else:
                     # If the ticker does not exist in the mapping, log the error
-                    LOGGER.debug(f'Could not find CIK for "{c_t}"')
+                    LOGGER.debug(f'Could not find CIK for ticker "{c_t}"')
 
     # Initialize list for dataframes
     dfs_list = []

@@ -868,11 +868,11 @@ class ExtractItems:
         # In some cases (mainly older .txt reports), part I is not mentioned in the text, only part II
         # Here, we can instead extract all the text before the position of part II and set it as part I
         if not part_positions or not texts:
-            LOGGER.warning(
+            LOGGER.debug(
                 f'{filing_metadata["filename"]} - Could not detect positions/texts of parts.'
             )
         elif not texts["part_1"] and part_positions:
-            LOGGER.warning(
+            LOGGER.debug(
                 f'{filing_metadata["filename"]} - Detected error in part separation - No PART I found. Changing Extraction to extract all text before PART II as PART I.'
             )
             # The positions indicate the end of the part. So we need to substract the length of the second part to get the end of the first part
@@ -886,7 +886,7 @@ class ExtractItems:
                 separation = (
                     part_positions[1] - len(texts["part_2"]) - part_positions[0]
                 )
-                LOGGER.warning(
+                LOGGER.debug(
                     f'{filing_metadata["filename"]} - Detected error in part separation - End of PART I is {separation} chars from start of PART II. Changing Extraction to extract all text between the two parts.'
                 )
                 # LOGGER.warning('This is likely due to an error in the report formatting. Be careful when working with the extracted Items. The text might not be separated correctly.')
@@ -964,7 +964,7 @@ class ExtractItems:
                 texts = self.check_10q_parts_for_bugs(
                     text, texts, part_positions, filing_metadata
                 )
-                LOGGER.warning(
+                LOGGER.debug(
                     f'{filing_metadata["filename"]} - Could not separate PARTs correctly. Likely PART I contains just ToC content.'
                 )
                 break
