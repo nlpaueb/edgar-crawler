@@ -1101,6 +1101,13 @@ class ExtractItems:
                         positions = []
                 text = part_texts[item_index.split("__")[0]]
 
+                # We want to add a separate key for each full part in the JSON content, which should be placed before the items of that part
+                if item_index.split("__")[0] not in json_content:
+                    parts_text = ExtractItems.remove_multiple_lines(
+                        part_texts[item_index.split("__")[0].strip()]
+                    )
+                    json_content[item_index.split("__")[0]] = parts_text
+
             if "part" in self.items_list[i - 1] and item_index == "SIGNATURE":
                 # We are working with a 10-Q but the above if-statement is not triggered
                 # We can just take the detected part_text for the signature - but we do not want to run parse_item again below
@@ -1130,19 +1137,6 @@ class ExtractItems:
                             + "_item_"
                             + item_index.split("__")[1]
                         ] = item_section
-                        # In some cases, we find different parts, but no items in the part
-                        # In this case, we create a separate json element for the whole part
-                        if (
-                            item_index.split("__")[0]
-                            != next_item_list[0].split("__")[0]
-                        ):
-                            # The next item is in a different part
-                            if all_items_null:
-                                # Nothing was extracted for the items of the current part - create an item for this part
-                                parts_text = ExtractItems.remove_multiple_lines(
-                                    part_texts[item_index.split("__")[0].strip()]
-                                )
-                                json_content[item_index.split("__")[0]] = parts_text
                     else:
                         json_content[f"item_{item_index}"] = item_section
 

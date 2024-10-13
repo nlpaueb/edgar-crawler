@@ -10,7 +10,7 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
 ### `EDGAR-CRAWLER` has 2 core modules:
 📥🕷️ Business Documents Crawling: Utilize the power of the `edgar_crawler.py` module to effortlessly crawl and download financial reports for every publicly-traded company within your specified years.
 
-🔍📑 Item Extraction: Extract and clean specific text sections such as Risk Factors or Management's Discussion & Analysis from 10-K documents (annual reports) and 8-K documents (current reports) using the `extract_items.py` module. Get straight to the heart of the information that matters most.
+🔍📑 Item Extraction: Extract and clean specific text sections such as Risk Factors or Management's Discussion & Analysis from 10-K documents (annual reports), 10-Q documents (quarterly reports) and 8-K documents (current reports) using the `extract_items.py` module. Get straight to the heart of the information that matters most.
 
 ## Who Can Benefit from `EDGAR-CRAWLER`?
 📚 Academics: Enhance your NLP research in economics & finance or business management by accessing and analyzing financial data efficiently.
@@ -24,6 +24,7 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
 [![Star History Chart](https://api.star-history.com/svg?repos=nlpaueb/edgar-crawler&type=Date)](https://star-history.com/#nlpaueb/edgar-crawler&Date)
 
 ## 🚨 News
+- 2024-10-13: We now also support the JSON extraction of 10-Q filings. ([@Bailefan](https://github.com/Bailefan))
 - 2024-10-05: We added support for JSON extraction of 8-K filings too. ([@Bailefan](https://github.com/Bailefan))
 - 2023-12-06: We had a Lightning Talk about EDGAR-CRAWLER at the 3rd Workshop for Natural Language Processing Open Source Software [(NLP-OSS)](https://nlposs.github.io/2023/), hosted at EMNLP 2023, in Singapore.
 - 2023-01-16: EDGAR-CORPUS, the biggest financial NLP corpus (generated from `EDGAR-CRAWLER`), is available as a HuggingFace 🤗 dataset card. See [Accompanying Resources](#Accompanying-Resources) for more details.
@@ -34,6 +35,7 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
 ## Table of Contents
 - [Install](#install)
 - [Usage](#usage)
+- [Example Outputs](#example-outputs)
 - [Citation](#citation)
 - [Accompanying Resources](#accompanying-resources)
 - [Contributing](#contributing)
@@ -72,7 +74,139 @@ Most importantly, apart from downloading EDGAR filings like other standard toolk
 
 - To download financial reports from EDGAR, run `python edgar_crawler.py`.
 - To clean and extract specific item sections from already-downloaded documents, run `python extract_items.py`.
-  - Reminder: We currently support the extraction of 10-K and 8-K documents. 
+  - Reminder: We currently support the extraction of 10-K, 10-Q and 8-K documents.
+  - Note: For older 10-Q filings, it might not be possible to extract any items for specific parts. Because of this, we also include each full `part` in the output file as a separate entry.
+
+## Example Outputs
+Examples of the outputs you can expect for the different files are shown here:
+
+### 10-K
+Original report: [Apple 10-K from 2022](https://www.sec.gov/Archives/edgar/data/320193/000032019322000108/aapl-20220924.htm)
+```
+{
+  "cik": "320193",
+  "company": "Apple Inc.",
+  "filing_type": "10-K",
+  "filing_date": "2022-10-28",
+  "period_of_report": "2022-09-24",
+  "sic": "3571",
+  "state_of_inc": "CA",
+  "state_location": "CA",
+  "fiscal_year_end": "0924",
+  "filing_html_index": "https://www.sec.gov/Archives/edgar/data/320193/0000320193-22-000108-index.html",
+  "htm_filing_link": "https://www.sec.gov/Archives/edgar/data/320193/000032019322000108/aapl-20220924.htm",
+  "complete_text_filing_link": "https://www.sec.gov/Archives/edgar/data/320193/0000320193-22-000108.txt",
+  "filename": "320193_10K_2022_0000320193-22-000108.htm",
+  "item_1": "Item 1. Business\nCompany Background\nThe Company designs, manufactures ...",
+  "item_1A": "Item 1A. Risk Factors\nThe Company’s business, reputation, results of ...",
+  "item_1B": "Item 1B. Unresolved Staff Comments\nNone.",
+  "item_1C": "",
+  "item_2": "Item 2. Properties\nThe Company’s headquarters are located in Cupertino, California. ...",
+  "item_3": "Item 3. Legal Proceedings\nEpic Games\nEpic Games, Inc. (“Epic”) filed a lawsuit ...",
+  "item_4": "Item 4. Mine Safety Disclosures\nNot applicable. ...",
+  "item_5": "Item 5. Market for Registrant’s Common Equity, Related Stockholder ...",
+  "item_6": "Item 6. [Reserved]\nApple Inc. | 2022 Form 10-K | 19",
+  "item_7": "Item 7. Management’s Discussion and Analysis of Financial Condition ...",
+  "item_8": "Item 8. Financial Statements and Supplementary Data\nAll financial ...",
+  "item_9": "Item 9. Changes in and Disagreements with Accountants on Accounting and Financial Disclosure\nNone.",
+  "item_9A": "Item 9A. Controls and Procedures\nEvaluation of Disclosure Controls and ...",
+  "item_9B": "Item 9B. Other Information\nRule 10b5-1 Trading Plans\nDuring the three months ...",
+  "item_9C": "Item 9C. Disclosure Regarding Foreign Jurisdictions that Prevent Inspections\nNot applicable. ...",
+  "item_10": "Item 10. Directors, Executive Officers and Corporate Governance\nThe information required ...",
+  "item_11": "Item 11. Executive Compensation\nThe information required by this Item will be included ...",
+  "item_12": "Item 12. Security Ownership of Certain Beneficial Owners and Management and ...",
+  "item_13": "Item 13. Certain Relationships and Related Transactions, and Director Independence ...",
+  "item_14": "Item 14. Principal Accountant Fees and Services\nThe information required ...",
+  "item_15": "Item 15. Exhibit and Financial Statement Schedules\n(a)Documents filed as part ...",
+  "item_16": "Item 16. Form 10-K Summary\nNone.\nApple Inc. | 2022 Form 10-K | 57",
+}
+```
+
+### 10-Q
+Original report: [Apple 10-Q from Q1 2024](https://www.sec.gov/Archives/edgar/data/320193/000032019324000069/aapl-20240330.htm)
+```
+{
+  "cik": "320193",
+  "company": "Apple Inc.",
+  "filing_type": "10-Q",
+  "filing_date": "2024-05-03",
+  "period_of_report": "2024-03-30",
+  "sic": "3571",
+  "state_of_inc": "CA",
+  "state_location": "CA",
+  "fiscal_year_end": "0928",
+  "filing_html_index": "https://www.sec.gov/Archives/edgar/data/320193/0000320193-24-000069-index.html",
+  "htm_filing_link": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000069/aapl-20240330.htm",
+  "complete_text_filing_link": "https://www.sec.gov/Archives/edgar/data/320193/0000320193-24-000069.txt",
+  "filename": "320193_10Q_2024_0000320193-24-000069.htm",
+  "part_1": "PART I - FINANCIAL INFORMATION\nItem 1. Financial Statements\nApple Inc.\nCONDENSED CONSOLIDATED STATEMENTS ...",
+  "part_1_item_1": "Item 1. Financial Statements\nApple Inc.\nCONDENSED CONSOLIDATED STATEMENTS ...",
+  "part_1_item_2": "Item 2. Management’s Discussion and Analysis of Financial Condition and ...",
+  "part_1_item_3": "Item 3. Quantitative and Qualitative Disclosures About Market Risk\nThere have ...",
+  "part_1_item_4": "Item 4. Controls and Procedures\nEvaluation of Disclosure Controls and ...",
+  "part_2": "PART II - OTHER INFORMATION\nItem 1. Legal Proceedings\nDigital Markets Act Investigations\nOn ...",
+  "part_2_item_1": "Item 1. Legal Proceedings\nDigital Markets Act Investigations\nOn March 25, 2024, ...",
+  "part_2_item_1A": "Item 1A. Risk Factors\nThe Company’s business, reputation, ...",
+  "part_2_item_2": "Item 2. Unregistered Sales of Equity Securities and Use of ...",
+  "part_2_item_3": "Item 3. Defaults Upon Senior Securities\nNone.",
+  "part_2_item_4": "Item 4. Mine Safety Disclosures\nNot applicable.",
+  "part_2_item_5": "Item 5. Other Information\nInsider Trading Arrangements\nNone.",
+  "part_2_item_6": "Item 6. Exhibits\nIncorporated by Reference\nExhibit\nNumber\nExhibit Description ..."
+}
+```
+**Note:** `part_1` and `part_2` contain the full detected text for that part.
+
+### 8-K
+Original report: [Apple 8-K from 2022-08-19](https://www.sec.gov/Archives/edgar/data/320193/000119312522225365/d366128d8k.htm)
+```
+{
+  "cik": "320193",
+  "company": "Apple Inc.",
+  "filing_type": "8-K",
+  "filing_date": "2022-08-19",
+  "period_of_report": "2022-08-17",
+  "sic": "3571",
+  "state_of_inc": "CA",
+  "state_location": "CA",
+  "fiscal_year_end": "0924",
+  "filing_html_index": "https://www.sec.gov/Archives/edgar/data/320193/0001193125-22-225365-index.html",
+  "htm_filing_link": "https://www.sec.gov/Archives/edgar/data/320193/000119312522225365/d366128d8k.htm",
+  "complete_text_filing_link": "https://www.sec.gov/Archives/edgar/data/320193/0001193125-22-225365.txt",
+  "filename": "320193_8K_2022_0001193125-22-225365.htm",
+  "item_1.01": "",
+  "item_1.02": "",
+  "item_1.03": "",
+  "item_1.04": "",
+  "item_1.05": "",
+  "item_2.01": "",
+  "item_2.02": "",
+  "item_2.03": "",
+  "item_2.04": "",
+  "item_2.05": "",
+  "item_2.06": "",
+  "item_3.01": "",
+  "item_3.02": "",
+  "item_3.03": "",
+  "item_4.01": "",
+  "item_4.02": "",
+  "item_5.01": "",
+  "item_5.02": "Item 5.02 Departure of Directors or Certain Officers; Election of Directors; Appointment ...",
+  "item_5.03": "Item 5.03 Amendments to Articles of Incorporation or Bylaws; Change in Fiscal Year.\nOn August 17, 2022, Apple’s Board approved and adopted amended and restated bylaws ...",
+  "item_5.04": "",
+  "item_5.05": "",
+  "item_5.06": "",
+  "item_5.07": "",
+  "item_5.08": "",
+  "item_6.01": "",
+  "item_6.02": "",
+  "item_6.03": "",
+  "item_6.04": "",
+  "item_6.05": "",
+  "item_7.01": "",
+  "item_8.01": "",
+  "item_9.01": "Item 9.01 Financial Statements and Exhibits.\n(d) Exhibits.\nExhibit\nNumber\nExhibit ...",
+}
+```
 
 ## Citation
 An EDGAR-CRAWLER paper is on its way. Until then, please cite the relevant EDGAR-CORPUS paper published at the [3rd Economics and Natural Language Processing (ECONLP) workshop](https://lt3.ugent.be/econlp/) at EMNLP 2021 (Punta Cana, Dominican Republic):

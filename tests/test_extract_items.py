@@ -178,15 +178,13 @@ class TestExtractItems(unittest.TestCase):
                     extracted_filing[current_item] == expected_filing[current_item]
                 )
 
-            # We added the possibility to extract the whole part if no items were found in the part
-            if "part_1" in expected_filing:
-                item_correct_dict["part_1"] = (
-                    extracted_filing["part_1"] == expected_filing["part_1"]
-                )
-            if "part_2" in expected_filing:
-                item_correct_dict["part_2"] = (
-                    extracted_filing["part_2"] == expected_filing["part_2"]
-                )
+            # For 10-Q we also extract the full parts in addition to the items - check if they are correct
+            item_correct_dict["part_1"] = (
+                extracted_filing["part_1"] == expected_filing["part_1"]
+            )
+            item_correct_dict["part_2"] = (
+                extracted_filing["part_2"] == expected_filing["part_2"]
+            )
 
             try:
                 self.assertEqual(extracted_filing, expected_filing)
