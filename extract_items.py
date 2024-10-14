@@ -15,7 +15,7 @@ from pathos.pools import ProcessPool
 from tqdm import tqdm
 
 from __init__ import DATASET_DIR
-from item_lists import item_list_8k, item_list_8k_obsolete, item_list_10k
+from item_lists import item_list_8k, item_list_8k_obsolete, item_list_10k, item_list_10q
 from logger import Logger
 
 # Change the default recursion limit of 1000 to 30000
@@ -27,6 +27,30 @@ cssutils.log.setLevel(logging.CRITICAL)
 cli = click.Group()
 
 regex_flags = re.IGNORECASE | re.DOTALL | re.MULTILINE
+
+# This map is needed for 10-Q reports. Until now they only have parts 1 and 2
+roman_numeral_map = {
+    "1": "I",
+    "2": "II",
+    "3": "III",
+    "4": "IV",
+    "5": "V",
+    "6": "VI",
+    "7": "VII",
+    "8": "VIII",
+    "9": "IX",
+    "10": "X",
+    "11": "XI",
+    "12": "XII",
+    "13": "XIII",
+    "14": "XIV",
+    "15": "XV",
+    "16": "XVI",
+    "17": "XVII",
+    "18": "XVIII",
+    "19": "XIX",
+    "20": "XX",
+}
 
 # Instantiate a logger object
 LOGGER = Logger(name="ExtractItems").get_logger()
@@ -151,6 +175,8 @@ class ExtractItems:
                 items_list = item_list_8k
             else:
                 items_list = item_list_8k_obsolete
+        elif filing_metadata["Type"] == "10-Q":
+            items_list = item_list_10q
         else:
             raise Exception(
                 f"Unsupported filing type: {filing_metadata['Type']}. No items_list defined."
@@ -500,10 +526,22 @@ class ExtractItems:
 
         Args:
             item_index (str): The item index to adjust the pattern for.
+                              For 10-Q preprocessing, this can also be part_1 or part_2.
 
         Returns:
             item_index_pattern (str): The adjusted item pattern
         """
+
+        # For 10-Q reports, we have two parts of items: part1 and part2
+        if "part" in item_index:
+            if "__" not in item_index:
+                # We are searching for the general part, not a specific item (e.g. PART I)
+                item_index_number = item_index.split("_")[1]
+                item_index_pattern = rf"PART\s*(?:{roman_numeral_map[item_index_number]}|{item_index_number})"
+                return item_index_pattern
+            else:
+                # We are working with an item, but we just consider the string after the part as the item_index
+                item_index = item_index.split("__")[1]
 
         # Create a regex pattern from the item index
         item_index_pattern = item_index
@@ -536,10 +574,11 @@ class ExtractItems:
         else:
             if "." in item_index:
                 # We need to escape the '.', otherwise it will be treated as a special character - for 8Ks
-                escaped_item_index = item_index.replace(".", "\.")
-                item_index_pattern = rf"ITEM\s*{escaped_item_index}"
-            else:
-                item_index_pattern = rf"ITEM\s*{item_index}"
+                item_index = item_index.replace(".", "\.")
+            if item_index in roman_numeral_map:
+                # Rarely, reports use roman numerals for the item indexes. For 8-K, we assume this does not occur (due to their format - e.g. 5.01)
+                item_index = f"(?:{roman_numeral_map[item_index]}|{item_index})"
+            item_index_pattern = rf"ITEM\s*{item_index}"
 
         return item_index_pattern
 
@@ -549,6 +588,7 @@ class ExtractItems:
         item_index: str,
         next_item_list: List[str],
         positions: List[int],
+        ignore_matches: int = 0,
     ) -> Tuple[str, List[int]]:
         """
         Parses the specified item/section in a report text.
@@ -558,6 +598,7 @@ class ExtractItems:
             item_index (str): Number of the requested Item/Section of the report text.
             next_item_list (List[str]): List of possible next report item sections.
             positions (List[int]): List of the end positions of previous item sections.
+            ignore_matches (int): Default is 0. If positive, we skip the first [value] matches. Only used for 10-Q part extraction.
 
         Returns:
             Tuple[str, List[int]]: The item/section as a text string and the updated end positions of item sections.
@@ -569,6 +610,10 @@ class ExtractItems:
         # Adjust the item index pattern
         item_index_pattern = self.adjust_item_patterns(item_index)
 
+        # Determine the current part in case of 10-Q reports
+        if "part" in item_index and "PART" not in item_index_pattern:
+            item_index_part_number = item_index.split("__")[0]
+
         # Depending on the item_index, search for subsequent sections.
         # There might be many 'candidate' text sections between 2 Items.
         # For example, the Table of Contents (ToC) still counts as a match when searching text between 'Item 3' and 'Item 4'
@@ -576,30 +621,61 @@ class ExtractItems:
 
         possible_sections_list = []  # possible list of (start, end) matches
         impossible_match = None  # list of matches where no possible section was found - (start, None) matches
+        last_item = True
         for next_item_index in next_item_list:
+            # Check if the next item is the last one
+            last_item = False
             if possible_sections_list:
                 break
+            if next_item_index == next_item_list[-1]:
+                last_item = True
 
             # Adjust the next item index pattern
             next_item_index_pattern = self.adjust_item_patterns(next_item_index)
 
+            # Check if the next item is in a different part - in this case we exit the loop
+            if "part" in next_item_index and "PART" not in next_item_index_pattern:
+                next_item_index_part_number = next_item_index.split("__")[0]
+                if next_item_index_part_number != item_index_part_number:
+                    # If the next item is in a subsequent part, we won't find it in the text -> should simply extract the rest of the current part
+                    last_item = True
+                    break
+
             # Find all the text sections between the current item and the next item
-            for match in list(
+            matches = list(
                 re.finditer(
                     rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s\(]",
                     text,
                     flags=regex_flags,
                 )
-            ):
+            )
+            for i, match in enumerate(matches):
+                if i < ignore_matches:
+                    # In some cases, the first matches might capture longer sections because parts/items are mentioned in the ToC.
+                    # We detect this in another place and then skip the first [ignore_matches] matches until we are more certain to have the correct section.
+                    continue
                 offset = match.start()
 
+                # First we do a case-sensitive search. This is because in some reports, parts or items are mentioned in the content,
+                # which we don't want to detect as a section header.
+                # The section headers are usually in uppercase, so checking this first avoids some errors.
                 possible = list(
                     re.finditer(
                         rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s\()].+?(\n[^\S\r\n]*{str(next_item_index_pattern)}[.*~\-:\s\(])",
                         text[offset:],
-                        flags=regex_flags,
+                        flags=re.DOTALL,
                     )
                 )
+
+                if not possible:
+                    # If there is no match, follow with a case-insensitive search
+                    possible = list(
+                        re.finditer(
+                            rf"\n[^\S\r\n]*{item_index_pattern}[.*~\-:\s\()].+?(\n[^\S\r\n]*{str(next_item_index_pattern)}[.*~\-:\s\(])",
+                            text[offset:],
+                            flags=regex_flags,
+                        )
+                    )
 
                 # If there is a match, add it to the list of possible sections
                 if possible:
@@ -626,14 +702,14 @@ class ExtractItems:
             # SIGNATURE is the last one, get all the text from its beginning until EOF
             if item_index == "SIGNATURE":
                 item_section = self.get_last_item_section(item_index, text, positions)
-        elif impossible_match:
+        elif impossible_match or last_item:
             # If there is only a single item in a report and no SIGNATURE (can happen for 8-K reports),
             # 'possible_sections_list' and thus also 'positions' will always be empty.
             # In this case we just want to extract from the match until the end of the document
             if item_index in self.items_list:
                 item_section = self.get_last_item_section(item_index, text, positions)
 
-        return item_section.strip(), positions
+        return item_section, positions
 
     @staticmethod
     def get_item_section(
@@ -727,6 +803,10 @@ class ExtractItems:
 
         item_section = ""
         for item in item_list:
+            if "SIGNATURE" in item_index:
+                # For SIGNATURE we want to take the last match since it can also appear in the ToC and mess up the extraction
+                if item != item_list[-1]:
+                    continue
             # Check if the item starts after the last known position
             if positions:
                 if item.start() >= positions[-1]:
@@ -739,6 +819,166 @@ class ExtractItems:
                 break
 
         return item_section
+
+    def parse_10q_parts(
+        self, parts: List[str], text: str, ignore_matches: int = 0
+    ) -> Tuple[Dict[str, str], List[int]]:
+        """Iterate over the different parts and parse their data from the text.
+
+        Args:
+            parts (List[str]): The parts we want to parse
+            text (str): The text of the document
+            ignore_matches (int): Default is 0. If positive, we skip the first [value] matches. Only used for 10-Q part extraction.
+
+        Returns:
+            Tuple[Dict[str, str], List[int]]: The content of each part and the end-positions of the parts in the text.
+        """
+
+        texts = {}
+        part_positions = []
+        for i, part in enumerate(parts):
+            # Find the section of the text that corresponds to the current part
+            next_part = parts[i + 1 :]
+            part_section, part_positions = self.parse_item(
+                text, part, next_part, part_positions, ignore_matches
+            )
+            texts[part] = part_section
+
+        return texts, part_positions
+
+    def check_10q_parts_for_bugs(
+        self,
+        text: str,
+        texts: Dict[str, str],
+        part_positions: List[int],
+        filing_metadata: Dict[str, Any],
+    ) -> Dict[str, str]:
+        """Since 10-Q reports fairly often contain bugs, we check for a series of cases in this function.
+
+        Args:
+            text (str): The full text of the report
+            texts (Dict[str, str]): Dictionary with the text for each part
+            positions (List[int]): End-positions of the parts in the text
+            filing_metadata (Dict[str, Any]): Metadata of the file
+
+        Returns:
+            texts (dict): The fixed Dictionary with the text for each part
+        """
+
+        # In some cases (mainly older .txt reports), part I is not mentioned in the text, only part II
+        # Here, we can instead extract all the text before the position of part II and set it as part I
+        if not part_positions or not texts:
+            LOGGER.debug(
+                f'{filing_metadata["filename"]} - Could not detect positions/texts of parts.'
+            )
+        elif not texts["part_1"] and part_positions:
+            LOGGER.debug(
+                f'{filing_metadata["filename"]} - Detected error in part separation - No PART I found. Changing Extraction to extract all text before PART II as PART I.'
+            )
+            # The positions indicate the end of the part. So we need to substract the length of the second part to get the end of the first part
+            texts["part_1"] = text[: part_positions[0] - len(texts["part_2"])]
+
+        # In some cases, PART I is only mentioned in the ToC while PART II is mentioned as normal
+        # Then, we would only extract the ToC content for PART I
+        # By checking the distance between the two parts, we can detect this error
+        elif len(part_positions) > 1:
+            if part_positions[1] - len(texts["part_2"]) - part_positions[0] > 200:
+                separation = (
+                    part_positions[1] - len(texts["part_2"]) - part_positions[0]
+                )
+                LOGGER.debug(
+                    f'{filing_metadata["filename"]} - Detected error in part separation - End of PART I is {separation} chars from start of PART II. Changing Extraction to extract all text between the two parts.'
+                )
+                # LOGGER.warning('This is likely due to an error in the report formatting. Be careful when working with the extracted Items. The text might not be separated correctly.')
+                # If the distance is very large, we instead simply extract all text between the two parts
+                texts["part_1"] = text[
+                    part_positions[0] - len(texts["part_1"]) : part_positions[1]
+                    - len(texts["part_2"])
+                ]
+
+        return texts
+
+    def get_10q_parts(
+        self, text: str, filing_metadata: Dict[str, Any]
+    ) -> Dict[str, str]:
+        """
+        For 10-Q reports, we have two parts with items which can have the same name (e.g. an item 1 in part 1 and an item 1 in part 2).
+        Because of this, we need to separate the report text according to the different parts before extracting the items.
+
+        Sometimes we get problems with the part extraction. Because of this, we check a few heuristics:
+            1. If not part-texts or part-positions are found, we cannot extract anything
+            2. If we don't have text for part I but have positions, we extract all text before part II as part I
+            3. If the distance between part I and part II is too large, we extract all text between the two parts and add it to part I
+            4. If part II is much longer than part I, we extract part II again but ignore the first [ignore_matches] matches for the
+               parts until it is not much longer
+            In all four cases, we raise log warnings to inform the user about potential problems in the report.
+
+        Args:
+            text (str): the full text of the report.
+            filing_metadata: Dict[str, Any]: a dictionary containing the metadata of the filing.
+
+        Returns:
+            texts (Dict[str, str]): a dictionary containing the text of each part.
+        """
+
+        # Detect all existing parts in the item_list - use loop to not have duplicates but keep order
+        parts = []
+        for item in self.items_list:
+            part = item.split("__")[0]
+            if part not in parts:
+                parts.append(part)
+        # Need to re-set items_list to parts for this step
+        self.items_list = parts
+
+        texts, part_positions = self.parse_10q_parts(parts, text, ignore_matches=0)
+
+        ### Check for potential problems in 10-Q reports - see docstring ###
+        texts = self.check_10q_parts_for_bugs(
+            text, texts, part_positions, filing_metadata
+        )
+
+        # In some cases, PART II already starts in the ToC & PART I only contains ToC text. PART II is then noticably longer than PART I
+        # However, usually PART I is the much longer part.
+        # In this case, we extract only PART II again but ignore the first [ignore_matches] matches for the parts until we find the correct PARTs
+        ignore_matches = 1
+        length_difference = len(texts["part_2"]) - len(texts["part_1"])
+        while length_difference > 5000:
+            texts, part_positions = self.parse_10q_parts(
+                parts, text, ignore_matches=ignore_matches
+            )
+            # Remove text of part 1 - we will later extract all text before part 2 for part 1
+            texts["part_1"] = ""
+
+            # Check for bugs again
+            texts = self.check_10q_parts_for_bugs(
+                text, texts, part_positions, filing_metadata
+            )
+
+            # Recalculate the length difference
+            new_length_difference = len(texts["part_2"]) - len(texts["part_1"])
+            if new_length_difference == length_difference:
+                # If the difference did not change, we stop here and extract as normal again
+                texts, part_positions = self.parse_10q_parts(
+                    parts, text, ignore_matches=0
+                )
+                texts = self.check_10q_parts_for_bugs(
+                    text, texts, part_positions, filing_metadata
+                )
+                LOGGER.debug(
+                    f'{filing_metadata["filename"]} - Could not separate PARTs correctly. Likely PART I contains just ToC content.'
+                )
+                break
+            length_difference = new_length_difference
+
+            # If we still have a large difference, we need to ignore more matches
+            ignore_matches += 1
+
+        ### End of checking for the 4 heuristics mentioned in docstring ###
+
+        # Set items_list back to 10q items
+        self.items_list = item_list_10q
+
+        return texts
 
     def extract_items(self, filing_metadata: Dict[str, Any]) -> Any:
         """
@@ -777,7 +1017,7 @@ class ExtractItems:
 
             # Check if the document is an allowed document type
             if doc_type.startswith(("10", "8")):
-                # For 10-K and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
+                # For 10-K, 10-Q and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
                 # Check if the document is HTML or plain text
                 doc_report = BeautifulSoup(doc, "lxml")
                 is_html = (True if doc_report.find("td") else False) and (
@@ -830,29 +1070,56 @@ class ExtractItems:
         }
 
         # Initialize item sections as empty strings in the JSON content
-        for item_index in self.items_to_extract:
-            if item_index == "SIGNATURE":
-                if self.include_signature:
-                    json_content[f"{item_index}"] = ""
-            else:
-                json_content[f"item_{item_index}"] = ""
+        # for item_index in self.items_to_extract:
+        #     if item_index == "SIGNATURE":
+        #         if self.include_signature:
+        #             json_content[f"{item_index}"] = ""
+        #     else:
+        #         json_content[f"item_{item_index}"] = ""
 
         # Extract the text from the document and clean it
         text = ExtractItems.strip_html(str(doc_report))
         text = ExtractItems.clean_text(text)
+
+        # For 10-Qs, need to separate the text into Part 1 and Part 2
+        if filing_metadata["Type"] == "10-Q":
+            part_texts = self.get_10q_parts(text, filing_metadata)
 
         positions = []
         all_items_null = True
         for i, item_index in enumerate(self.items_list):
             next_item_list = self.items_list[i + 1 :]
 
-            # Parse each item/section and get its content and positions
-            item_section, positions = self.parse_item(
-                text, item_index, next_item_list, positions
-            )
+            # If the text is divided in parts, we just take the text from the corresponding part
+            if "part" in item_index:
+                if i != 0:
+                    # We need to reset the positions to [] for each new part
+                    if (
+                        self.items_list[i - 1].split("__")[0]
+                        != item_index.split("__")[0]
+                    ):
+                        positions = []
+                text = part_texts[item_index.split("__")[0]]
+
+                # We want to add a separate key for each full part in the JSON content, which should be placed before the items of that part
+                if item_index.split("__")[0] not in json_content:
+                    parts_text = ExtractItems.remove_multiple_lines(
+                        part_texts[item_index.split("__")[0].strip()]
+                    )
+                    json_content[item_index.split("__")[0]] = parts_text
+
+            if "part" in self.items_list[i - 1] and item_index == "SIGNATURE":
+                # We are working with a 10-Q but the above if-statement is not triggered
+                # We can just take the detected part_text for the signature - but we do not want to run parse_item again below
+                item_section = part_texts[item_index]
+            else:
+                ### Parse each item/section and get its content and positions - For 10-K and 8-K we will just run this! ###
+                item_section, positions = self.parse_item(
+                    text, item_index, next_item_list, positions
+                )
 
             # Remove multiple lines from the item section
-            item_section = ExtractItems.remove_multiple_lines(item_section)
+            item_section = ExtractItems.remove_multiple_lines(item_section.strip())
 
             if item_index in self.items_to_extract:
                 if item_section != "":
@@ -863,7 +1130,15 @@ class ExtractItems:
                     if self.include_signature:
                         json_content[f"{item_index}"] = item_section
                 else:
-                    json_content[f"item_{item_index}"] = item_section
+                    if "part" in item_index:
+                        # special naming convention for 10-Qs
+                        json_content[
+                            item_index.split("__")[0]
+                            + "_item_"
+                            + item_index.split("__")[1]
+                        ] = item_section
+                    else:
+                        json_content[f"item_{item_index}"] = item_section
 
         if all_items_null:
             LOGGER.info(f"\nCould not extract any item for {absolute_filename}")
@@ -915,7 +1190,7 @@ class ExtractItems:
 
 def main() -> None:
     """
-    Gets the list of supported (10K, 8K) files and extracts all textual items/sections by calling the extract_items() function.
+    Gets the list of supported (10K, 8K, 10Q) files and extracts all textual items/sections by calling the extract_items() function.
     """
 
     with open("config.json") as fin:
@@ -943,7 +1218,7 @@ def main() -> None:
         return
 
     # For debugging one report
-    # debug_file_name = "320193_10K_2022_0000320193-22-000108.htm"
+    # debug_file_name = "1002135_10Q_1998_0000914760-99-000052.txt"
     # filings_metadata_df = filings_metadata_df[filings_metadata_df["filename"] == debug_file_name]
 
     raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
