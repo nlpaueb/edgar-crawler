@@ -15,7 +15,16 @@ from pathos.pools import ProcessPool
 from tqdm import tqdm
 
 from __init__ import DATASET_DIR
-from item_lists import item_list_8k, item_list_8k_obsolete, item_list_10k, item_list_10q
+from item_lists import (
+    item_list_8k,
+    item_list_8k_obsolete,
+    item_list_10k,
+    item_list_10q,
+    item_list_form3,  # New import
+    item_list_form4,  # New import
+    item_list_sc13d,  # New import
+    item_list_sc13g,  # New import
+)
 from logger import Logger
 
 # Change the default recursion limit of 1000 to 30000
@@ -163,7 +172,6 @@ class ExtractItems:
     def determine_items_to_extract(self, filing_metadata) -> None:
         """
         Determine the items to extract based on the filing type.
-
         Sets the items_to_extract attribute based on the filing type and the items provided by the user.
         """
         if filing_metadata["Type"] == "10-K":
@@ -177,6 +185,14 @@ class ExtractItems:
                 items_list = item_list_8k_obsolete
         elif filing_metadata["Type"] == "10-Q":
             items_list = item_list_10q
+        elif filing_metadata["Type"] == "3":
+            items_list = item_list_form3
+        elif filing_metadata["Type"] == "4":
+            items_list = item_list_form4
+        elif filing_metadata["Type"] in ["SC13D", "SC13D/A"]:
+            items_list = item_list_sc13d
+        elif filing_metadata["Type"] in ["SC13G", "SC13G/A"]:
+            items_list = item_list_sc13g
         else:
             raise Exception(
                 f"Unsupported filing type: {filing_metadata['Type']}. No items_list defined."
@@ -980,9 +996,45 @@ class ExtractItems:
 
         return texts
 
+    def extract_ownership_items(self, doc_report: str, is_html: bool) -> Dict[str, str]:
+        """
+        Extract items from ownership filings (Form 3, 4, SC13D/G)
+        
+        Args:
+            doc_report: The document text
+            is_html: Whether the document is HTML
+
+        Returns:
+            Dict containing extracted sections
+        """
+        extracted = {}
+        
+        # First extract the main content
+        text = ExtractItems.strip_html(str(doc_report))
+        text = ExtractItems.clean_text(text)
+        
+        # Extract tables if present and needed
+        if not self.remove_tables and is_html:
+            tables = doc_report.find_all("table")
+            for table in tables:
+                table_text = ExtractItems.strip_html(str(table))
+                if "Non-Derivative Securities" in table_text:
+                    extracted["non_derivative_securities"] = table_text
+                elif "Derivative Securities" in table_text:  
+                    extracted["derivative_securities"] = table_text
+
+        # Extract signature if requested
+        if self.include_signature:
+            signature_pattern = r"SIGNATURE\s*After reasonable inquiry.*?(?=\n\n|\Z)"
+            signature_match = re.search(signature_pattern, text, re.DOTALL | re.IGNORECASE)
+            if signature_match:
+                extracted["signature"] = signature_match.group(0)
+
+        return extracted
+
     def extract_items(self, filing_metadata: Dict[str, Any]) -> Any:
         """
-        Extracts all items/sections for a file and writes it to a CIK_TYPE_YEAR.json file (eg. 1384400_10K_2017.json)
+        Extracts all items/sections for a file and writes it to a JSON file.
 
         Args:
             filing_metadata (Dict[str, Any]): a pandas series containing all filings metadata
@@ -1016,9 +1068,7 @@ class ExtractItems:
             doc_type = doc_type.group(1) if doc_type else None
 
             # Check if the document is an allowed document type
-            if doc_type.startswith(("10", "8")):
-                # For 10-K, 10-Q and 8-K filings. We only check for the number in case it is e.g. '10K' instead of '10-K'
-                # Check if the document is HTML or plain text
+            if doc_type and (doc_type.startswith(("10", "8")) or doc_type in ["3", "4", "SC 13D", "SC 13G", "SC 13D/A", "SC 13G/A"]):
                 doc_report = BeautifulSoup(doc, "lxml")
                 is_html = (True if doc_report.find("td") else False) and (
                     True if doc_report.find("tr") else False
@@ -1026,7 +1076,7 @@ class ExtractItems:
                 if not is_html:
                     doc_report = doc
                 found = True
-                # break
+                break
 
         if not found:
             if documents:
@@ -1045,8 +1095,9 @@ class ExtractItems:
         if filing_metadata["filename"].endswith("txt") and not documents:
             LOGGER.info(f'\nNo <DOCUMENT> tag for {filing_metadata["filename"]}')
 
-        # For non-HTML documents, clean all table items
-        if self.remove_tables:
+        # For non-HTML documents, clean all table items if remove_tables is True
+        if self.remove_tables and filing_metadata["Type"] not in ["3", "4", "SC13D", "SC13G", "SC13D/A", "SC13G/A"]:
+            # Don't remove tables for ownership filings as they contain crucial information
             doc_report = self.remove_html_tables(doc_report, is_html=is_html)
 
         # Detect span elements and handle them depending on span type
@@ -1069,15 +1120,55 @@ class ExtractItems:
             "filename": filing_metadata["filename"],
         }
 
-        # Initialize item sections as empty strings in the JSON content
-        # for item_index in self.items_to_extract:
-        #     if item_index == "SIGNATURE":
-        #         if self.include_signature:
-        #             json_content[f"{item_index}"] = ""
-        #     else:
-        #         json_content[f"item_{item_index}"] = ""
+        # Handle ownership filings separately
+        if filing_metadata["Type"] in ["3", "4", "SC13D", "SC13D/A", "SC13G", "SC13G/A"]:
+            text = ExtractItems.strip_html(str(doc_report))
+            text = ExtractItems.clean_text(text)
 
-        # Extract the text from the document and clean it
+            # Extract tables for Forms 3 and 4
+            if filing_metadata["Type"] in ["3", "4"] and is_html:
+                tables = doc_report.find_all("table")
+                for table in tables:
+                    table_text = ExtractItems.strip_html(str(table))
+                    if "Non-Derivative Securities" in table_text:
+                        json_content["non_derivative_securities"] = ExtractItems.remove_multiple_lines(table_text.strip())
+                    elif "Derivative Securities" in table_text:
+                        json_content["derivative_securities"] = ExtractItems.remove_multiple_lines(table_text.strip())
+
+            # Extract sections for SC13D/G
+            if filing_metadata["Type"] in ["SC13D", "SC13D/A", "SC13G", "SC13G/A"]:
+                positions = []
+                for i, item_index in enumerate(self.items_list):
+                    next_item_list = self.items_list[i + 1:]
+                    item_section, positions = self.parse_item(text, item_index, next_item_list, positions)
+                    if item_section:
+                        if item_index == "SIGNATURE" and self.include_signature:
+                            json_content["signature"] = ExtractItems.remove_multiple_lines(item_section.strip())
+                        else:
+                            json_content[f"item_{item_index}"] = ExtractItems.remove_multiple_lines(item_section.strip())
+
+            # Extract remarks if present
+            remarks_pattern = r"Remarks:.*?(?=\n\n|\Z)"
+            remarks_match = re.search(remarks_pattern, text, re.DOTALL | re.IGNORECASE)
+            if remarks_match:
+                json_content["remarks"] = ExtractItems.remove_multiple_lines(remarks_match.group(0).strip())
+
+            # Extract explanation of responses if present
+            explanation_pattern = r"Explanation of Responses:.*?(?=\n\n|\Z)"
+            explanation_match = re.search(explanation_pattern, text, re.DOTALL | re.IGNORECASE)
+            if explanation_match:
+                json_content["explanation_of_responses"] = ExtractItems.remove_multiple_lines(explanation_match.group(0).strip())
+
+            # Extract signature for Forms 3 and 4 if requested
+            if self.include_signature and filing_metadata["Type"] in ["3", "4"]:
+                signature_pattern = r"(/s/|Signature of Reporting Person).*?(?=\n\n|\Z)"
+                signature_match = re.search(signature_pattern, text, re.DOTALL | re.IGNORECASE)
+                if signature_match:
+                    json_content["signature"] = ExtractItems.remove_multiple_lines(signature_match.group(0).strip())
+
+            return json_content
+
+        # Extract the text from the document and clean it for non-ownership filings
         text = ExtractItems.strip_html(str(doc_report))
         text = ExtractItems.clean_text(text)
 
@@ -1088,7 +1179,7 @@ class ExtractItems:
         positions = []
         all_items_null = True
         for i, item_index in enumerate(self.items_list):
-            next_item_list = self.items_list[i + 1 :]
+            next_item_list = self.items_list[i + 1:]
 
             # If the text is divided in parts, we just take the text from the corresponding part
             if "part" in item_index:
@@ -1101,7 +1192,7 @@ class ExtractItems:
                         positions = []
                 text = part_texts[item_index.split("__")[0]]
 
-                # We want to add a separate key for each full part in the JSON content, which should be placed before the items of that part
+                # We want to add a separate key for each full part in the JSON content
                 if item_index.split("__")[0] not in json_content:
                     parts_text = ExtractItems.remove_multiple_lines(
                         part_texts[item_index.split("__")[0].strip()]
@@ -1110,10 +1201,8 @@ class ExtractItems:
 
             if "part" in self.items_list[i - 1] and item_index == "SIGNATURE":
                 # We are working with a 10-Q but the above if-statement is not triggered
-                # We can just take the detected part_text for the signature - but we do not want to run parse_item again below
                 item_section = part_texts[item_index]
             else:
-                ### Parse each item/section and get its content and positions - For 10-K and 8-K we will just run this! ###
                 item_section, positions = self.parse_item(
                     text, item_index, next_item_list, positions
                 )
