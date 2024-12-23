@@ -7,11 +7,11 @@
 
 **EDGAR-CRAWLER** has 2 core functionalities:
 - 📥 **Seamless downloading**: Retrieve and download financial filings from all US publicly-traded companies based on your specified filters, like year, quarters, filing type, etc.
-- 🔍 **Structured JSON output**: Extract and parse key sections from 10-K, 10-Q, and 8-K filings into a nice-and-easy standardized JSON format.  *(filings supported: 10-K, 10-Q, 8-K)*
+- 🔍 **Structured JSON output**: Extract and parse specific key sections from 10-K, 10-Q, and 8-K filings into a nice-and-easy standardized JSON format.  *(filings supported: 10-K, 10-Q, 8-K)*
 
 
 ## 🚨 News
-- 2024/10: We added support for **JSON parsing of 10-Q and 8-K** filings. ([@Bailefan](https://github.com/Bailefan))
+- 2024/10: We now support **structured JSON output for 10-Q and 8-K** filings. ([@Bailefan](https://github.com/Bailefan))
 - 2023/12: We had a Lightning Talk about EDGAR-CRAWLER at the 3rd Workshop for Natural Language Processing Open Source Software [(NLP-OSS)](https://nlposs.github.io/2023/), hosted at EMNLP 2023, in Singapore.
 - 2023/01: EDGAR-CORPUS, the biggest financial NLP corpus (generated from EDGAR-CRAWLER!), is available as a HuggingFace 🤗 dataset card. See [Accompanying Resources](#Accompanying-Resources).
 - 2022/10: Updated documentation and fixed a minor import bug affecting older Python versions.
@@ -24,8 +24,9 @@
 - [Usage](#usage)
 - [Citation](#citation)
 - [Accompanying Resources](#accompanying-resources)
+- [Feedback](#feedback)
 - [Contributing](#contributing)
-- [License](#license)
+- [Issues](#issues)
 
 ## Example JSON Outputs
 Other than downloading the raw filings, **EDGAR-CRAWLER** is the only open-source toolkit that converts the complex and unstructured SEC filings to **structured JSON outputs** for easier integration to your research and development. Below are examples of such outputs for each supported filing type:
@@ -258,9 +259,12 @@ Read the EDGAR-CORPUS paper here: [https://aclanthology.org/2021.econlp-1.2/](ht
 ## Accompanying Resources
 Here are some additional resources created by using **EDGAR-CRAWLER**:
  
-- **EDGAR-CORPUS**: The largest financial NLP corpus, containing 25+ years of annual reports and 6+ billion tokens [(HuggingFace URL 🤗 )](https://huggingface.co/datasets/eloukas/edgar-corpus/) | [(Zenodo URL)](https://zenodo.org/record/5528490).
+- **EDGAR-CORPUS**: The largest financial NLP corpus, 6+ billion tokens from annual reports [(HuggingFace URL 🤗)](https://huggingface.co/datasets/eloukas/edgar-corpus/) | [(Zenodo URL)](https://zenodo.org/record/5528490).
 
 - **EDGAR-W2V**: Financial Word2Vec embeddings, pre-trained on EDGAR-CORPUS [(Zenodo URL)](https://zenodo.org/record/5524358)
+
+## Feedback for EDGAR-CRAWLER
+Do you have any feature request? [Tell us directly using this Google Form: (https://forms.gle/bpV8nxMqX8Sq2v5z8)!](https://forms.gle/bpV8nxMqX8Sq2v5z8)
 
 ## Contributing
 PRs and contributions are accepted. We use the [Feature Branch Workflow](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project).
