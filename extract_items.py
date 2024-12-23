@@ -469,65 +469,74 @@ class ExtractItems:
             return data
 
     def _extract_form4_data(self, root: ET.Element) -> Dict[str, Any]:
-        """
-        Extract Form 4 specific data.
+            """Extract Form 4 specific data."""
+            data = {
+                'derivative_transactions': [],
+                'non_derivative_transactions': [],
+                'footnotes': {},
+                'remarks': None
+            }
 
-        Args:
-            root (ET.Element): XML root element
+            # Extract derivative transactions
+            derivative_table = root.find('.//derivativeTable')
+            if derivative_table is not None:
+                for transaction in derivative_table.findall('.//derivativeTransaction'):
+                    trans = {
+                        'security_title': transaction.findtext('.//securityTitle/value', '').strip(),
+                        'conversion_price': transaction.findtext('.//conversionOrExercisePrice/value', '').strip(),
+                        'transaction_date': transaction.findtext('.//transactionDate/value', '').strip(),
+                        'transaction_coding': {
+                            'form_type': transaction.findtext('.//transactionFormType', '').strip(),
+                            'code': transaction.findtext('.//transactionCode', '').strip(),
+                            'equity_swap_involved': transaction.findtext('.//equitySwapInvolved', '').strip()
+                        },
+                        'transaction_amounts': {
+                            'shares': transaction.findtext('.//transactionShares/value', '').strip(),
+                            'price_per_share': transaction.findtext('.//transactionPricePerShare/value', '').strip(),
+                            'acquired_disposed_code': transaction.findtext('.//transactionAcquiredDisposedCode/value', '').strip()
+                        },
+                        'underlying_security': {
+                            'title': transaction.findtext('.//underlyingSecurityTitle/value', '').strip(),
+                            'shares': transaction.findtext('.//underlyingSecurityShares/value', '').strip()
+                        },
+                        'post_transaction': {
+                            'shares_owned': transaction.findtext('.//sharesOwnedFollowingTransaction/value', '').strip()
+                        },
+                        'ownership_nature': transaction.findtext('.//directOrIndirectOwnership/value', '').strip(),
+                        'exercise_date': transaction.findtext('.//exerciseDate/value', '').strip(),
+                        'expiration_date': transaction.findtext('.//expirationDate/value', '').strip()
+                    }
+                    data['derivative_transactions'].append(trans)
 
-        Returns:
-            Dict[str, Any]: Extracted Form 4 data
-        """
-        data = {
-            'derivative_transactions': [],
-            'non_derivative_transactions': [],
-            'footnotes': {},
-            'remarks': None
-        }
+            # Extract non-derivative transactions
+            non_derivative_table = root.find('.//nonDerivativeTable')
+            if non_derivative_table is not None:
+                for transaction in non_derivative_table.findall('.//nonDerivativeTransaction'):
+                    trans = {
+                        'security_title': transaction.findtext('.//securityTitle/value', '').strip(),
+                        'transaction_date': transaction.findtext('.//transactionDate/value', '').strip(),
+                        'transaction_coding': {
+                            'form_type': transaction.findtext('.//transactionFormType', '').strip(),
+                            'code': transaction.findtext('.//transactionCode', '').strip(),
+                            'equity_swap_involved': transaction.findtext('.//equitySwapInvolved', '').strip()
+                        },
+                        'transaction_amounts': {
+                            'shares': transaction.findtext('.//transactionShares/value', '').strip(),
+                            'price_per_share': transaction.findtext('.//transactionPricePerShare/value', '').strip(),
+                            'acquired_disposed_code': transaction.findtext('.//transactionAcquiredDisposedCode/value', '').strip()
+                        },
+                        'post_transaction': {
+                            'shares_owned': transaction.findtext('.//sharesOwnedFollowingTransaction/value', '').strip()
+                        },
+                        'ownership_nature': transaction.findtext('.//directOrIndirectOwnership/value', '').strip()
+                    }
+                    data['non_derivative_transactions'].append(trans)
 
-        # Extract derivative transactions
-        derivative_table = root.find('.//derivativeTable')
-        if derivative_table is not None:
-            for transaction in derivative_table.findall('.//derivativeTransaction'):
-                trans = {
-                    'security_title': transaction.findtext('.//securityTitle/value', '').strip(),
-                    'conversion_price': transaction.findtext('.//conversionOrExercisePrice/value', '').strip(),
-                    'transaction_date': transaction.findtext('.//transactionDate/value', '').strip(),
-                    'transaction_code': transaction.findtext('.//transactionCode', '').strip(),
-                    'shares': transaction.findtext('.//transactionShares/value', '').strip(),
-                    'price_per_share': transaction.findtext('.//transactionPricePerShare/value', '').strip(),
-                    'ownership_nature': transaction.findtext('.//directOrIndirectOwnership/value', '').strip()
-                }
-                data['derivative_transactions'].append(trans)
+            # Extract footnotes and remarks
+            data['footnotes'] = self._extract_footnotes(root)
+            data['remarks'] = root.findtext('.//remarks', '').strip()
 
-        # Extract non-derivative transactions
-        non_derivative_table = root.find('.//nonDerivativeTable')
-        if non_derivative_table is not None:
-            for transaction in non_derivative_table.findall('.//nonDerivativeTransaction'):
-                trans = {
-                    'security_title': transaction.findtext('.//securityTitle/value', '').strip(),
-                    'transaction_date': transaction.findtext('.//transactionDate/value', '').strip(),
-                    'transaction_code': transaction.findtext('.//transactionCode', '').strip(),
-                    'shares': transaction.findtext('.//transactionShares/value', '').strip(),
-                    'price_per_share': transaction.findtext('.//transactionPricePerShare/value', '').strip(),
-                    'ownership_nature': transaction.findtext('.//directOrIndirectOwnership/value', '').strip()
-                }
-                data['non_derivative_transactions'].append(trans)
-
-        # Extract footnotes and remarks
-        data['footnotes'] = self._extract_footnotes(root)
-        data['remarks'] = root.findtext('.//remarks', '').strip()
-
-        # Extract signature if requested
-        if self.include_signature:
-            signature = root.find('.//ownerSignature')
-            if signature is not None:
-                data['signature'] = {
-                    'name': signature.findtext('.//signatureName', '').strip(),
-                    'date': signature.findtext('.//signatureDate', '').strip()
-                }
-
-        return data
+            return data
 
     def _extract_schedule13_data(self, root: ET.Element) -> Dict[str, Any]:
         """
