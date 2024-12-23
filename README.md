@@ -1,7 +1,8 @@
 # EDGAR-CRAWLER: Extract Key Financial Data from SEC Filings Effortlessly 🚀
 ![EDGAR-CRAWLER-LOGO](images/edgar-crawler-logo-white-bg.jpeg)
 
-**EDGAR-CRAWLER** simplifies access to financial text data by **downloading SEC EDGAR filings** and transforming these complex, unstructured documents **into** **structured, standardized JSON files**, making it easier to use them **for downstream NLP tasks and financial analysis.**
+
+**EDGAR-CRAWLER** is the only open-source toolkit that **downloads** **raw** and unstructured financial **SEC filings** from EDGAR and converts them **into** **structured JSON files** in order to **bootstrap financial NLP** experiments.
 
 ---
 
