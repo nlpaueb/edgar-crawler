@@ -1,5 +1,5 @@
 {
-	"edgar_crawler": {
+	"download_filings": {
 		"start_year": 2023,
 		"end_year": 2023,
 		"quarters": [1, 2, 3, 4],
