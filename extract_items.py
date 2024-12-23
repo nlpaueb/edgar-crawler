@@ -31,7 +31,7 @@ from logger import Logger
 # Change the default recursion limit of 1000 to 30000
 sys.setrecursionlimit(30000)
 
-# Suppress cssutils stupid warnings
+# Suppress cssutils warnings
 cssutils.log.setLevel(logging.CRITICAL)
 
 cli = click.Group()
