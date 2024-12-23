@@ -16,7 +16,7 @@ class Logger:
 
         Args:
             name (str): The name of the logger.
-            filename (str): The base name of the log file. Examples: "edgar_crawler_2024_10_12_11_36_50_.log" and "ExtractItems_2024_10_12_11_37_11_.log"
+            filename (str): The base name of the log file. Examples: "download_filings_2024_10_12_11_36_50_.log" and "ExtractItems_2024_10_12_11_37_11_.log"
         """
         self.timestamp = strftime("%Y_%m_%d_%H_%M_%S", gmtime())
         self.filename = f"{name}_{self.timestamp}_{filename}"

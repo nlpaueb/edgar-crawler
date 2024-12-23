@@ -70,7 +70,7 @@ def main():
 
     # Load the configuration file
     with open("config.json") as fin:
-        config = json.load(fin)["edgar_crawler"]
+        config = json.load(fin)["download_filings"]
 
     # Define the directories and filepaths
     raw_filings_folder = os.path.join(DATASET_DIR, config["raw_filings_folder"])
@@ -248,7 +248,7 @@ def download_indices(
 
     base_url = "https://www.sec.gov/Archives/edgar/full-index/"
 
-    LOGGER.info("Downloading EDGAR Index files")
+    LOGGER.info("Downloading index files from SEC...")
 
     # Validate quarters
     for quarter in quarters:
