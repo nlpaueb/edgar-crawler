@@ -1246,7 +1246,7 @@ def main() -> None:
     )
 
     LOGGER.info(
-        f"Starting the JSON extraction from {len(filings_metadata_df)} unstructured EDGAR filings."
+        f"Starting the structured JSON extraction from {len(filings_metadata_df)} unstructured EDGAR filings."
     )
 
     list_of_series = list(zip(*filings_metadata_df.iterrows()))[1]
