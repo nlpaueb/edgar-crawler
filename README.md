@@ -200,7 +200,7 @@ pip install -r requirements.txt # Install requirements for edgar-crawler
 
 ## Usage
 - Before running any script, you should edit the `config.json` file, which configures the behavior of our 2 modules (one for downloading the filings of your choice, the other one for getting the structured output of them). 
-  - Arguments for `edgar_crawler.py`, the module to download financial reports:
+  - Arguments for `download_filings.py`, the module to download financial reports:
       - `start_year XXXX`: the year range to start from (default is 2023).
       - `end_year YYYY`: the year range to end to (default is 2023).
       - `quarters`: the quarters that you want to download filings from (List).<br> Default value is: `[1, 2, 3, 4]`.
@@ -216,7 +216,7 @@ pip install -r requirements.txt # Install requirements for edgar-crawler
   - Arguments for `extract_items.py`, the module to clean and extract textual data from already-downloaded reports:
     - `raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
     - `extracted_filings_folder`: the name of the folder where extracted documents will be stored.<br> Default value is `'EXTRACTED_FILINGS'`.<br> For each downloaded report, a corresponding JSON file will be created containing the item sections as key-pair values.
-    - `filings_metadata_file`: CSV filename to load reports metadata (Provide the same csv file as in `edgar_crawler.py`).
+    - `filings_metadata_file`: CSV filename to load reports metadata (Provide the same csv file as in `download_filings.py`).
     - `filing_types`: list of filing types to extract.
     - `include_signature`: Whether to include the signature section after the last item or not.
     - `items_to_extract`: a list with the certain item sections to extract. <br>
@@ -225,7 +225,7 @@ pip install -r requirements.txt # Install requirements for edgar-crawler
     - `remove_tables`: Whether to remove tables containing mostly numerical (financial) data. This work is mostly to facilitate NLP research where, often, numerical tables are not useful.
     - `skip_extracted_filings`: Whether to skip already extracted filings or extract them nonetheless.<br> Default value is `True`.
 
-- To download the raw financial reports from EDGAR, run `python edgar_crawler.py`.
+- To download the raw financial reports from EDGAR, run `python download_filings.py`.
 - To clean and extract specific item sections from already-downloaded documents, run `python extract_items.py`.
   - Reminder: **We currently support the structured JSON output for 10-K, 10-Q and 8-K documents.**
   - Note: For older 10-Q filings, it might not be possible to extract any items for specific parts (Part 1 or Part 2). Because of this, we also include each full `part` in the output file as a separate entry.
