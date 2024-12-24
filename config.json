@@ -1,24 +1,23 @@
-{
-    "edgar_crawler": {
-        "start_year": 2023,
-        "end_year": 2024,
-        "quarters": [1, 2, 3, 4],
-        "filing_types": ["3", "4", "SC13D-A", "SC13G"],
-        "cik_tickers": ["SMR"],
-        "user_agent": "",
-        "raw_filings_folder": "RAW_FILINGS",
-        "indices_folder": "INDICES",
-        "filings_metadata_file": "FILINGS_METADATA.csv",
-        "skip_present_indices": true
-    },
-    "extract_items": {
-        "raw_filings_folder": "RAW_FILINGS",
-        "extracted_filings_folder": "EXTRACTED_FILINGS",  
-        "filings_metadata_file": "FILINGS_METADATA.csv",
-        "filing_types": ["3", "4", "SC13D-A", "SC13G"],
-        "include_signature": false,
-        "items_to_extract": [],
-        "remove_tables": true,
-        "skip_extracted_filings": true
-    }
+	"download_filings": {
+		"start_year": 2023,
+		"end_year": 2023,
+		"quarters": [1, 2, 3, 4],
+		"filing_types": ["10-K", "10-Q", "8-K"],
+		"cik_tickers": ["AAPL"],
+		"user_agent": "Your name (your email)",
+		"raw_filings_folder": "RAW_FILINGS",
+		"indices_folder": "INDICES",
+		"filings_metadata_file": "FILINGS_METADATA.csv",
+		"skip_present_indices": true
+	},
+	"extract_items": {
+		"raw_filings_folder": "RAW_FILINGS",
+		"extracted_filings_folder": "EXTRACTED_FILINGS",
+		"filings_metadata_file": "FILINGS_METADATA.csv",
+		"filing_types": ["10-K", "10-Q", "8-K"],
+		"include_signature": false,
+		"items_to_extract": [],
+		"remove_tables": true,
+		"skip_extracted_filings": true
+	}
 }

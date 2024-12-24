@@ -28,7 +28,7 @@ def extract_zip(input_zip):
         raise ValueError(f"Unrecognized folder name in `input_zip`: {input_zip}")
 
     zf = zipfile.ZipFile(input_zip)
-    zf.extractall(path=os.path.join("/tmp", "edgar_crawler", folder_name))
+    zf.extractall(path=os.path.join("/tmp", "edgar-crawler", folder_name))
 
 
 class TestExtractItems(unittest.TestCase):
@@ -70,7 +70,7 @@ class TestExtractItems(unittest.TestCase):
                 "16",  # "SIGNATURE"
             ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",  # don't want 10-K here because this is added in extract_items.py
+            raw_files_folder="/tmp/edgar-crawler/RAW_FILINGS/",  # don't want 10-K here because this is added in extract_items.py
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -83,7 +83,7 @@ class TestExtractItems(unittest.TestCase):
             extracted_filing = extraction.extract_items(filing_metadata)
 
             expected_filing_filepath = os.path.join(
-                "/tmp/edgar_crawler/EXTRACTED_FILINGS/10-K",
+                "/tmp/edgar-crawler/EXTRACTED_FILINGS/10-K",
                 f"{filing_metadata['filename'].split('.')[0]}.json",
             )
             with open(expected_filing_filepath) as f:
@@ -143,7 +143,7 @@ class TestExtractItems(unittest.TestCase):
                 "part_2__6",  # "SIGNATURE",
             ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",  # don't want 10-Q here because this is added in extract_items.py
+            raw_files_folder="/tmp/edgar-crawler/RAW_FILINGS/",  # don't want 10-Q here because this is added in extract_items.py
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -156,7 +156,7 @@ class TestExtractItems(unittest.TestCase):
             extracted_filing = extraction.extract_items(filing_metadata)
 
             expected_filing_filepath = os.path.join(
-                "/tmp/edgar_crawler/EXTRACTED_FILINGS/10-Q",
+                "/tmp/edgar-crawler/EXTRACTED_FILINGS/10-Q",
                 f"{filing_metadata['filename'].split('.')[0]}.json",
             )
             with open(expected_filing_filepath) as f:
@@ -247,7 +247,7 @@ class TestExtractItems(unittest.TestCase):
                 "9.01",  # "SIGNATURE",
             ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",
+            raw_files_folder="/tmp/edgar-crawler/RAW_FILINGS/",
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -270,7 +270,7 @@ class TestExtractItems(unittest.TestCase):
                 "12",  # "SIGNATURE",
             ],
             include_signature=False,
-            raw_files_folder="/tmp/edgar_crawler/RAW_FILINGS/",
+            raw_files_folder="/tmp/edgar-crawler/RAW_FILINGS/",
             extracted_files_folder="",
             skip_extracted_filings=True,
         )
@@ -289,7 +289,7 @@ class TestExtractItems(unittest.TestCase):
             extracted_filing = extraction.extract_items(filing_metadata)
 
             expected_filing_filepath = os.path.join(
-                "/tmp/edgar_crawler/EXTRACTED_FILINGS/8-K",
+                "/tmp/edgar-crawler/EXTRACTED_FILINGS/8-K",
                 f"{filing_metadata['filename'].split('.')[0]}.json",
             )
             with open(expected_filing_filepath) as f:
