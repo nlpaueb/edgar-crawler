@@ -1,5 +1,6 @@
 """
-Description: This file contains hard-coded lists of items for 10-K, 8-K and 10-Q reports.
+Description: This file contains hard-coded lists of items for 10-K, 8-K, 10-Q reports,
+and ownership filings (Form 3, Form 4, SC13D, and SC13G).
 For 8-K reports we also need a secondary list for obsolete (older) reports since the item names were changed.
 In the case of 10-Q filings, the items are divided into two parts: part_1 and part_2.
 """
@@ -98,6 +99,56 @@ item_list_10q = [
     "SIGNATURE",
 ]
 
+# New item lists for ownership filings
+item_list_form3 = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "Table I",
+    "Table II",
+    "Notes",
+    "Remarks",
+    "SIGNATURE",
+]
+
+item_list_form4 = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "Table I",
+    "Table II",
+    "Notes",
+    "Remarks",
+    "SIGNATURE",
+]
+
+item_list_sc13d = [
+    "1",  # Security and Issuer
+    "2",  # Identity and Background
+    "3",  # Source and Amount of Funds
+    "4",  # Purpose of Transaction
+    "5",  # Interest in Securities
+    "6",  # Contracts, Arrangements, Understandings
+    "7",  # Material to be Filed as Exhibits
+    "SIGNATURE",
+]
+
+item_list_sc13g = [
+    "1",  # Security and Issuer
+    "2",  # Identity and Background
+    "3",  # Source and Amount of Funds
+    "4",  # Purpose of Transaction
+    "5",  # Interest in Securities
+    "6",  # Contracts, Arrangements, Understandings
+    "7",  # Material to be Filed as Exhibits
+    "SIGNATURE",
+]
+
+# Keep the commented out alternative 10-Q format for reference
 # item_list_10q = {
 #     "part_1": [
 #         "1",
