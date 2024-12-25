@@ -1344,10 +1344,7 @@ def main() -> None:
         skip_extracted_filings=config["skip_extracted_filings"],
     )
 
-
-    LOGGER.info(
-        f"Starting the structured JSON extraction from {len(filings_metadata_df)} unstructured EDGAR filings."
-    )
+    LOGGER.info(f"Starting the JSON extraction from {len(filings_metadata_df)} unstructured EDGAR filings.")
 
     list_of_series = list(zip(*filings_metadata_df.iterrows()))[1]
 
@@ -1369,8 +1366,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
