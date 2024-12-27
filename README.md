@@ -213,6 +213,7 @@ pip install -r requirements.txt # Install requirements for edgar-crawler
       - `raw_filings_folder`: the name of the folder where downloaded filings will be stored.<br> Default value is `'RAW_FILINGS'`.
       - `indices_folder`: the name of the folder where EDGAR TSV files will be stored. These are used to locate the annual reports. Default value is `'INDICES'`.
       - `filings_metadata_file`: CSV filename to save metadata from the reports.
+      - `non_periodic_filing_types`: filing types that do not have period of report (e.g. 144).
       - `skip_present_indices`: Whether to skip already downloaded EDGAR indices or download them nonetheless.<br> Default value is `True`.
   - Arguments for `extract_items.py`, the module to clean and extract textual data from already-downloaded reports:
     - `raw_filings_folder`: the name of the folder where the downloaded documents are stored.<br> Default value s `'RAW_FILINGS'`.
