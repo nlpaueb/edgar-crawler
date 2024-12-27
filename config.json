@@ -9,6 +9,7 @@
 		"raw_filings_folder": "RAW_FILINGS",
 		"indices_folder": "INDICES",
 		"filings_metadata_file": "FILINGS_METADATA.csv",
+		"non_periodic_filing_types": ["144"],
 		"skip_present_indices": true
 	},
 	"extract_items": {
