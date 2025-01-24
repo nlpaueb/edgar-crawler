@@ -578,7 +578,7 @@ class ExtractItems:
             if item_index in roman_numeral_map:
                 # Rarely, reports use roman numerals for the item indexes. For 8-K, we assume this does not occur (due to their format - e.g. 5.01)
                 item_index = f"(?:{roman_numeral_map[item_index]}|{item_index})"
-            item_index_pattern = rf"ITEM\s*{item_index}"
+            item_index_pattern = rf"ITEMS?\s*{item_index}"
 
         return item_index_pattern
 
