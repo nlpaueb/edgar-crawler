@@ -187,6 +187,7 @@ def main():
             filing_types=config["filing_types"],
             raw_filings_folder=raw_filings_folder,
             user_agent=config["user_agent"],
+            non_periodic_filing_types=config["non_periodic_filing_types"]
         )
 
         # If the series was successfully downloaded, append it to the final series
@@ -462,7 +463,7 @@ def get_specific_indices(
 
 
 def crawl(
-    filing_types: List[str], series: pd.Series, raw_filings_folder: str, user_agent: str
+    filing_types: List[str], series: pd.Series, raw_filings_folder: str, user_agent: str, non_periodic_filing_types: List[str]
 ) -> pd.Series:
     """
     Crawls the EDGAR HTML indexes and extracts required details.
@@ -474,13 +475,14 @@ def crawl(
             series (pd.Series): A single series with info for specific filings.
             raw_filings_folder (str): Raw filings folder path.
             user_agent (str): The User-agent string that will be declared to SEC EDGAR.
+            non_periodic_filing_types (List[str]): List of filing types that do not have period of report
 
     Returns:
             pd.Series: The series with the extracted data.
     """
 
     html_index = series["html_index"]
-
+    is_non_periodic_filing = series["Type"] in non_periodic_filing_types
     # Retries for making the request if not successful at first attempt
     try:
         # Exponential backoff retry logic
@@ -526,7 +528,7 @@ def crawl(
             period_of_report = form.nextSibling.nextSibling.text
             series["Period of Report"] = period_of_report
 
-    if period_of_report is None:
+    if period_of_report is None and not is_non_periodic_filing:
         LOGGER.debug(f'Can not crawl "Period of Report" for {html_index}')
         return None
 
@@ -719,7 +721,11 @@ def crawl(
                 accession_num = os.path.splitext(
                     os.path.basename(series["complete_text_file_link"])
                 )[0]
-                filename = f"{str(series['CIK'])}_{filing_type_name}_{period_of_report[:4]}_{accession_num}.{file_extension}"
+
+                if is_non_periodic_filing:
+                    filename = f"{str(series['CIK'])}_{filing_type_name}_{accession_num}.{file_extension}"
+                else:
+                    filename = f"{str(series['CIK'])}_{filing_type_name}_{period_of_report[:4]}_{accession_num}.{file_extension}"
 
                 # Download the file
                 success = download(
