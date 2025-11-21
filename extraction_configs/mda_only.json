@@ -1,0 +1,11 @@
+{
+    "description": "Configuration for extracting only MD&A (Management's Discussion and Analysis) sections from 10-K filings",
+    "raw_filings_folder": "RAW_FILINGS",
+    "extracted_filings_folder": "EXTRACTED_FILINGS",
+    "filings_metadata_file": "FILINGS_METADATA.csv",
+    "filing_types": ["10-K"],
+    "items_to_extract": ["7"],
+    "include_signature": false,
+    "remove_tables": false,
+    "skip_extracted_filings": true
+}

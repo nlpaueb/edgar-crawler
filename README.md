@@ -232,6 +232,45 @@ pip install -r requirements.txt # Install requirements for edgar-crawler
   - Reminder: **We currently support the structured JSON output for 10-K, 10-Q and 8-K documents.**
   - Note: For older 10-Q filings, it might not be possible to extract any items for specific parts (Part 1 or Part 2). Because of this, we also include each full `part` in the output file as a separate entry.
 
+### Flexible Extractor (Alternative Approach)
+
+For more flexibility and better control over extraction configurations, you can use the **flexible_extractor.py** script with custom configuration files:
+
+```bash
+python flexible_extractor.py --config extraction_configs/mda_only.json
+```
+
+**Key features of the Flexible Extractor:**
+- 🔄 **Resume functionality**: Automatically skips already processed files, allowing you to resume extraction after interruptions
+- ⚙️ **Custom configurations**: Create multiple configuration files for different extraction needs
+- 📊 **Progress tracking**: Shows detailed progress with counts of processed and skipped files
+- 🚀 **Parallel processing**: Supports multi-core processing with the `--processes` flag
+
+**Example usage with parallel processing:**
+```bash
+python flexible_extractor.py --config extraction_configs/mda_only.json --processes 4
+```
+
+**Sample configuration file** (`extraction_configs/mda_only.json`):
+```json
+{
+    "description": "Extract only MD&A sections from 10-K filings",
+    "raw_filings_folder": "RAW_FILINGS",
+    "extracted_filings_folder": "EXTRACTED_FILINGS",
+    "filings_metadata_file": "FILINGS_METADATA.csv",
+    "filing_types": ["10-K"],
+    "items_to_extract": ["7"],
+    "include_signature": false,
+    "remove_tables": false,
+    "skip_extracted_filings": true
+}
+```
+
+You can create your own configuration files in the `extraction_configs/` directory to extract different item sections. For example:
+- Extract only Risk Factors: `"items_to_extract": ["1A"]`
+- Extract Business + Risk Factors: `"items_to_extract": ["1", "1A"]`
+- Extract Financial Statements: `"items_to_extract": ["8"]`
+
 
 ## Citation
 Please cite our 2 relevant papers:
