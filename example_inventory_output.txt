@@ -1,0 +1,62 @@
+======================================================================
+EDGAR DOWNLOAD INVENTORY
+======================================================================
+
+💾 Storage Usage:
+   RAW filings: 239.78 GB
+   EXTRACTED filings: 0.00 GB
+   Total: 239.78 GB
+
+📊 Downloaded Filings (from metadata):
+   [Successfully downloaded and recorded in FILINGS_METADATA.csv]
+   Total filings: 5,618
+
+   By Filing Type:
+      10-K: 5,618
+
+   Unique Firms: 456
+
+📁 RAW Filings (on disk):
+   [Shows files in RAW_FILINGS directory]
+   10-K: 5,618 unique filings (85,019 total files, ~15.1 files/filing)
+
+📄 EXTRACTED Filings:
+
+📈 Batch Download Progress:
+   Total batches: 29
+   ✅ Completed: 29 (100.0%)
+
+🔍 Metadata vs Disk Comparison:
+   ✅ 10-K: Metadata=5,618, Disk=5,618 (diff: +0)
+
+ℹ️  Notes:
+   • 'Downloaded Filings' = Successfully downloaded filings in metadata
+   • 'RAW Filings' = Files on disk (unique filings + total files)
+   • Metadata vs Disk shows if counts match (ideally should be equal)
+   • If Disk > Metadata: Extra files on disk (duplicates/failed downloads)
+   • If Metadata > Disk: Missing files (deleted or moved)
+
+======================================================================
+
+EXPLANATION OF THE NUMBERS:
+---------------------------
+
+What was confusing before:
+- "📊 Downloaded Filings: 10-K: 5,618"
+- "📁 RAW Filings: 10-K: 85,019 files"
+
+Why the difference?
+- Each of the 5,618 10-K filings generates approximately 15 files on disk
+- This could be due to:
+  1. Year-based subdirectory structure (2020/, 2021/, 2022/, etc.)
+  2. Multiple file formats per filing (HTML, TXT, XML)
+  3. Associated documents (exhibits, images, CSS files)
+  4. Temporary or partially downloaded files
+
+The new display now shows:
+- "10-K: 5,618 unique filings (85,019 total files, ~15.1 files/filing)"
+
+This makes it CLEAR that:
+- You have 5,618 unique 10-K filings
+- These are stored as 85,019 total files
+- On average, each filing has ~15 files associated with it

@@ -324,8 +324,129 @@ class TestExtractItems(unittest.TestCase):
             self.fail(f"Extraction failed for the following items:\n{failure_report}")
 
 
+    def test_special_items_extraction(self):
+        """Test special items extraction functionality with synthetic data."""
+
+        # Test monetary amount extraction
+        test_text = """
+        The company recorded restructuring charges of $125.3 million in 2023.
+        This includes severance costs of ($23.5 million) and facility closure costs.
+        See Note 12 for additional details. Asset impairment charges totaled 450 million.
+        Acquisition-related transaction costs were $75 million. Gain on sale of assets was $30 million.
+        """
+
+        amounts = ExtractItems.extract_monetary_amounts(test_text)
+        self.assertGreater(len(amounts), 0, "Should extract at least one monetary amount")
+
+        # Check that we found the $125.3 million
+        found_125 = any(abs(amt['value'] - 125.3) < 0.1 and 'million' in amt['scale'] for amt in amounts)
+        self.assertTrue(found_125, "Should extract $125.3 million")
+
+        # Check negative amount (parenthetical)
+        found_negative = any(amt['value'] < 0 for amt in amounts)
+        self.assertTrue(found_negative, "Should extract negative amounts in parentheses")
+
+        # Test footnote reference extraction
+        footnotes = ExtractItems.extract_footnote_references(test_text)
+        self.assertGreater(len(footnotes), 0, "Should extract at least one footnote reference")
+
+        # Check that we found Note 12
+        found_note = any('12' in ref['note_id'] for ref in footnotes)
+        self.assertTrue(found_note, "Should extract Note 12 reference")
+
+        # Test full special items extraction with config
+        special_items_config = {
+            'enabled': True,
+            'scan_item_7_mda': False,
+            'confidence_threshold': 0.3,
+            'debug_logging': False,
+            'keywords': {
+                'restructuring': ['restructuring', 'severance', 'facility closure'],
+                'impairment': ['impairment', 'asset impairment'],
+                'acquisition': ['acquisition', 'transaction costs', 'M&A'],
+                'asset_sale': ['gain on sale', 'loss on sale', 'asset disposal'],
+            }
+        }
+
+        # Create a mock filing with special items
+        mock_filing_html = """
+        <html><body>
+        ITEM 8. Financial Statements
+        <table>
+        <tr><td>Restructuring charges</td><td>$125.3 million</td></tr>
+        </table>
+        The company recorded restructuring charges of $125.3 million related to
+        workforce reduction and facility closure costs. See Note 12.
+
+        Asset impairment charges of $450 million were recorded in Q4 2023.
+
+        Acquisition-related transaction costs totaled $75 million for the merger with XYZ Corp.
+
+        The company recorded a gain on sale of manufacturing facility of $30 million.
+        </body></html>
+        """
+
+        extraction = ExtractItems(
+            remove_tables=True,
+            items_to_extract=[],
+            include_signature=False,
+            raw_files_folder="",
+            extracted_files_folder="",
+            skip_extracted_filings=True,
+            special_items_config=special_items_config,
+        )
+
+        from bs4 import BeautifulSoup
+        doc_report = BeautifulSoup(mock_filing_html, "lxml")
+        is_html = True
+        filing_metadata = {
+            'filename': 'test_filing.htm',
+            'Type': '10-K',
+            'CIK': '123456',
+            'Company': 'Test Company',
+        }
+
+        special_items = extraction.extract_special_items(
+            doc_report=doc_report,
+            is_html=is_html,
+            filing_metadata=filing_metadata,
+            special_items_config=special_items_config
+        )
+
+        # Validate results
+        self.assertGreater(len(special_items), 0, "Should extract at least one special item")
+
+        # Check for restructuring item
+        restructuring_items = [item for item in special_items if item['type'] == 'restructuring']
+        self.assertGreater(len(restructuring_items), 0, "Should find restructuring items")
+
+        # Check for impairment item
+        impairment_items = [item for item in special_items if item['type'] == 'impairment']
+        self.assertGreater(len(impairment_items), 0, "Should find impairment items")
+
+        # Verify structure of extracted items
+        for item in special_items:
+            self.assertIn('type', item)
+            self.assertIn('confidence', item)
+            self.assertIn('keywords_matched', item)
+            self.assertIn('context', item)
+            self.assertIn('source_section', item)
+            self.assertIn('amount_raw', item)
+            self.assertIn('footnote_reference', item)
+
+            # Confidence should be a number between 0 and 1
+            self.assertGreaterEqual(item['confidence'], 0.0)
+            self.assertLessEqual(item['confidence'], 1.0)
+
+        print(f"\nExtracted {len(special_items)} special items:")
+        for item in special_items:
+            print(f"  - {item['type']}: {item.get('amount_raw', 'N/A')} "
+                  f"(confidence: {item['confidence']:.2f})")
+
+
 if __name__ == "__main__":
     test = TestExtractItems()
     test.test_extract_items_10K()
     test.test_extract_items_10Q()
     test.test_extract_items_8K()
+    test.test_special_items_extraction()

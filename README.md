@@ -74,10 +74,63 @@ Original report: [Apple 10-K from 2022](https://www.sec.gov/Archives/edgar/data/
     "item_13": "Item 13. Certain Relationships and Related Transactions, and Director Independence ...",
     "item_14": "Item 14. Principal Accountant Fees and Services\nThe information required ...",
     "item_15": "Item 15. Exhibit and Financial Statement Schedules\n(a)Documents filed as part ...",
-    "item_16": "Item 16. Form 10-K Summary\nNone.\nApple Inc. | 2022 Form 10-K | 57"
+    "item_16": "Item 16. Form 10-K Summary\nNone.\nApple Inc. | 2022 Form 10-K | 57",
+    "special_items": [
+      {
+        "type": "restructuring",
+        "keywords_matched": ["restructuring charges"],
+        "confidence": 0.90,
+        "source_section": "item_8",
+        "context": "...recorded restructuring charges of $125.3 million...",
+        "amount_raw": "$125.3 million",
+        "amount_value": 125.3,
+        "amount_scale": "million",
+        "footnote_reference": "Note 12",
+        "footnote_id": "12",
+        "anchor_hash": 12345678
+      }
+    ]
   }
 ```
 
+**Note**: The `special_items` array is optional and only included when special items extraction is enabled in the configuration.
+
+### Special Items Extraction
+
+**EDGAR-CRAWLER** now supports automated extraction of special/nonrecurring items from financial statements. Special items are typically disclosed in the "Consolidated Statements of Operations" (income statement) with details in the footnotes of 10-K reports.
+
+**What are Special Items?**
+Special items (also called nonrecurring or unusual items) are one-time or infrequent charges/gains that companies report separately because they don't reflect normal ongoing operations. Examples include:
+- Restructuring charges (severance, facility closures)
+- Asset impairment charges
+- Legal settlements and litigation costs
+- Discontinued operations
+- Merger and acquisition-related expenses (transaction costs, integration costs, advisory fees)
+- Gains or losses from asset sales and divestitures
+
+**How it works:**
+1. Scans Item 8 (Financial Statements) and optionally Item 7 (MD&A)
+2. Uses keyword-based pattern matching to identify special items
+3. Extracts monetary amounts and links to footnote references
+4. Calculates confidence scores based on context
+5. Outputs structured JSON with all findings
+
+**Output Structure:**
+Each special item in the `special_items` array contains:
+- `type`: Category (restructuring, impairment, litigation, discontinued_ops, acquisition, asset_sale, unusual, other)
+- `keywords_matched`: List of matched keywords
+- `confidence`: Confidence score (0.0-1.0)
+- `source_section`: Source item (item_7 or item_8)
+- `context`: Surrounding text excerpt
+- `amount_raw`: Raw amount text (e.g., "$125.3 million")
+- `amount_value`: Parsed numeric value (e.g., 125.3)
+- `amount_scale`: Scale indicator (million, billion, dollars)
+- `footnote_reference`: Reference to related footnote (e.g., "Note 12")
+- `footnote_id`: Extracted footnote number/letter
+- `anchor_hash`: Lightweight hash for source traceability
+
+**Configuration:**
+See the `special_items` section in `config.json` to enable/disable extraction, adjust confidence thresholds, customize keywords, and enable debug logging.
 
 ### 10-Q (Quarterly Report)
 
@@ -226,6 +279,20 @@ pip install -r requirements.txt # Install requirements for edgar-crawler
       By default, this list is empty, in which case all items are extracted.
     - `remove_tables`: Whether to remove tables containing mostly numerical (financial) data. This work is mostly to facilitate NLP research where, often, numerical tables are not useful.
     - `skip_extracted_filings`: Whether to skip already extracted filings or extract them nonetheless.<br> Default value is `True`.
+    - `special_items`: Configuration for extracting special/nonrecurring items from financial statements. This is a nested object with the following fields:
+      - `enabled`: Whether to enable special items extraction.<br> Default value is `true`.
+      - `scan_item_7_mda`: Whether to also scan Item 7 (MD&A) in addition to Item 8.<br> Default value is `false`.
+      - `confidence_threshold`: Minimum confidence score (0.0-1.0) for including a special item.<br> Default value is `0.3`.
+      - `debug_logging`: Whether to log detailed extraction information for debugging.<br> Default value is `false`.
+      - `keywords`: A dictionary of keyword categories and their associated search terms. Categories include:
+        - `restructuring`: Keywords for restructuring charges (e.g., "restructuring", "workforce reduction", "severance")
+        - `impairment`: Keywords for asset impairments (e.g., "impairment", "write-down", "goodwill impairment")
+        - `litigation`: Keywords for legal settlements (e.g., "litigation", "settlement", "legal proceeding")
+        - `discontinued_ops`: Keywords for discontinued operations (e.g., "discontinued operation", "disposal of business")
+        - `acquisition`: Keywords for M&A-related expenses (e.g., "acquisition", "merger", "transaction costs", "integration costs", "M&A")
+        - `asset_sale`: Keywords for asset sales and divestitures (e.g., "gain on sale", "loss on sale", "asset disposal", "divestiture")
+        - `unusual`: Keywords for unusual/nonrecurring items (e.g., "one-time", "special charge", "non-gaap adjustment")
+        - `other`: Keywords for other special items (e.g., "debt extinguishment", "pension settlement", "foreign exchange")
 
 - To download the raw financial reports from EDGAR, run `python download_filings.py`.
 - To clean and extract specific item sections from already-downloaded documents, run `python extract_items.py`.
