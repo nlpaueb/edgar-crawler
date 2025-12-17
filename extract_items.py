@@ -140,6 +140,7 @@ class ExtractItems:
         raw_files_folder: str,
         extracted_files_folder: str,
         skip_extracted_filings: bool,
+        special_items_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Constructs all the necessary attributes for the ExtractItems object.
@@ -150,6 +151,7 @@ class ExtractItems:
             raw_files_folder (str): Path of the folder containing raw files.
             extracted_files_folder (str): Path of the folder where extracted files should be saved.
             skip_extracted_filings (bool): Whether to skip already extracted filings.
+            special_items_config (Optional[Dict[str, Any]]): Configuration for special items extraction.
         """
 
         self.remove_tables = remove_tables
@@ -159,6 +161,7 @@ class ExtractItems:
         self.raw_files_folder = raw_files_folder
         self.extracted_files_folder = extracted_files_folder
         self.skip_extracted_filings = skip_extracted_filings
+        self.special_items_config = special_items_config or {'enabled': False}
 
     def determine_items_to_extract(self, filing_metadata) -> None:
         """
@@ -574,7 +577,7 @@ class ExtractItems:
         else:
             if "." in item_index:
                 # We need to escape the '.', otherwise it will be treated as a special character - for 8Ks
-                item_index = item_index.replace(".", "\.")
+                item_index = item_index.replace(".", r"\.")
             if item_index in roman_numeral_map:
                 # Rarely, reports use roman numerals for the item indexes. For 8-K, we assume this does not occur (due to their format - e.g. 5.01)
                 item_index = f"(?:{roman_numeral_map[item_index]}|{item_index})"
@@ -898,6 +901,260 @@ class ExtractItems:
 
         return texts
 
+    @staticmethod
+    def extract_monetary_amounts(text: str) -> List[Dict[str, Any]]:
+        """
+        Extract monetary amounts from text with various formats.
+
+        Args:
+            text (str): The text to search for monetary amounts
+
+        Returns:
+            List[Dict[str, Any]]: List of found amounts with value, scale, and position
+        """
+        amounts = []
+
+        # Patterns for different monetary formats
+        # Matches: $123.4M, $123.4 million, $123,456, $123.4B, etc.
+        patterns = [
+            # Dollar sign with scale: $123.4M, $123.4 million
+            (r'\$\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(million|billion|thousand|m|b|k)?',
+             lambda m: (float(m.group(1).replace(',', '')), m.group(2) or 'dollars')),
+            # Parenthetical amounts (losses): ($123.4), (123.4 million)
+            (r'\(\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(million|billion|thousand|m|b|k)?\)',
+             lambda m: (-float(m.group(1).replace(',', '')), m.group(2) or 'dollars')),
+            # Plain numbers with scale: 123.4 million
+            (r'(?<!\d)(\d+(?:,\d{3})*(?:\.\d+)?)\s+(million|billion|thousand)',
+             lambda m: (float(m.group(1).replace(',', '')), m.group(2))),
+        ]
+
+        for pattern, extractor in patterns:
+            for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                try:
+                    value, scale = extractor(match)
+                    amounts.append({
+                        'raw': match.group(0),
+                        'value': value,
+                        'scale': scale.lower() if scale else 'dollars',
+                        'position': match.start()
+                    })
+                except (ValueError, AttributeError):
+                    continue
+
+        return amounts
+
+    @staticmethod
+    def extract_footnote_references(text: str) -> List[Dict[str, Any]]:
+        """
+        Extract footnote references from text.
+
+        Args:
+            text (str): The text to search for footnote references
+
+        Returns:
+            List[Dict[str, Any]]: List of footnote references with text and position
+        """
+        references = []
+
+        # Patterns for footnote references
+        patterns = [
+            r'(?:see\s+)?note\s+(\d+|[A-Z])',  # "Note 5", "See Note 12", "Note A"
+            r'\((\d+)\)',  # "(1)", "(12)"
+            r'footnote\s+(\d+)',  # "Footnote 5"
+        ]
+
+        for pattern in patterns:
+            for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+                references.append({
+                    'raw': match.group(0),
+                    'note_id': match.group(1),
+                    'position': match.start()
+                })
+
+        return references
+
+    def extract_special_items(
+        self,
+        doc_report: Any,
+        is_html: bool,
+        filing_metadata: Dict[str, Any],
+        special_items_config: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract special/nonrecurring items from financial statements before table removal.
+        This preserves table context and footnote references that may be lost in cleaning.
+
+        Args:
+            doc_report: The BeautifulSoup document or raw text
+            is_html (bool): Whether the document is HTML
+            filing_metadata (Dict[str, Any]): Filing metadata
+            special_items_config (Dict[str, Any]): Configuration for special items extraction
+
+        Returns:
+            List[Dict[str, Any]]: List of identified special items with metadata
+        """
+
+        if not special_items_config.get('enabled', False):
+            return []
+
+        special_items = []
+        keywords = special_items_config.get('keywords', {})
+        confidence_threshold = special_items_config.get('confidence_threshold', 0.3)
+        debug_logging = special_items_config.get('debug_logging', False)
+
+        # Convert document to text while preserving some structure
+        if is_html:
+            # Get Item 8 section (Financial Statements) before full processing
+            # We'll search in tables and text
+            doc_text = str(doc_report)
+        else:
+            doc_text = doc_report
+
+        # Search for Item 8 boundaries to focus extraction
+        item_8_match = re.search(
+            r'\n[^\S\r\n]*ITEMS?\s*8[.*~\-:\s\(]',
+            doc_text,
+            flags=re.IGNORECASE | re.DOTALL
+        )
+
+        # Optional: also search in Item 7 (MD&A) if configured
+        item_7_match = None
+        if special_items_config.get('scan_item_7_mda', False):
+            item_7_match = re.search(
+                r'\n[^\S\r\n]*ITEMS?\s*7[.*~\-:\s\(]',
+                doc_text,
+                flags=re.IGNORECASE | re.DOTALL
+            )
+
+        # Determine search scope
+        search_start = item_7_match.start() if item_7_match else (item_8_match.start() if item_8_match else 0)
+        search_text = doc_text[search_start:search_start + 500000]  # Limit to ~500KB to avoid processing entire doc
+
+        # Build keyword patterns with word boundaries
+        keyword_patterns = {}
+        for category, terms in keywords.items():
+            # Create regex pattern that matches any of the terms
+            pattern = r'\b(' + '|'.join(re.escape(term) for term in terms) + r')\b'
+            keyword_patterns[category] = re.compile(pattern, flags=re.IGNORECASE)
+
+        # Search for keyword matches
+        for category, pattern in keyword_patterns.items():
+            for match in pattern.finditer(search_text):
+                keyword_matched = match.group(0)
+                match_position = match.start()
+
+                # Extract context window (500 chars before and after)
+                context_start = max(0, match_position - 500)
+                context_end = min(len(search_text), match_position + 500)
+                context = search_text[context_start:context_end]
+
+                # Look for monetary amounts in context
+                amounts = ExtractItems.extract_monetary_amounts(context)
+
+                # Look for footnote references in context
+                footnote_refs = ExtractItems.extract_footnote_references(context)
+
+                # Calculate confidence score
+                confidence = 0.0
+
+                # Base confidence from keyword strength
+                if category in ['restructuring', 'impairment', 'discontinued_ops']:
+                    confidence += 0.4  # Strong indicators
+                elif category in ['litigation', 'unusual', 'acquisition']:
+                    confidence += 0.3  # Medium indicators
+                elif category in ['asset_sale']:
+                    confidence += 0.25  # Medium-weak indicators (gains/losses are common)
+                else:
+                    confidence += 0.2  # Weaker indicators
+
+                # Boost confidence if monetary amount found nearby
+                if amounts:
+                    closest_amount = min(amounts, key=lambda a: abs(a['position'] - (match_position - context_start)))
+                    distance = abs(closest_amount['position'] - (match_position - context_start))
+                    if distance < 100:
+                        confidence += 0.3
+                    elif distance < 200:
+                        confidence += 0.2
+                    elif distance < 300:
+                        confidence += 0.1
+
+                # Boost confidence if footnote reference found
+                if footnote_refs:
+                    closest_ref = min(footnote_refs, key=lambda r: abs(r['position'] - (match_position - context_start)))
+                    distance = abs(closest_ref['position'] - (match_position - context_start))
+                    if distance < 150:
+                        confidence += 0.2
+
+                # Only include if meets confidence threshold
+                if confidence < confidence_threshold:
+                    continue
+
+                # Build special item record
+                special_item = {
+                    'type': category,
+                    'keywords_matched': [keyword_matched],
+                    'confidence': round(confidence, 2),
+                    'source_section': 'item_7' if item_7_match and match_position < (item_8_match.start() - search_start if item_8_match else float('inf')) else 'item_8',
+                    'context': context.strip()[:300] + '...' if len(context) > 300 else context.strip(),  # Truncate long context
+                }
+
+                # Add amount information if found
+                if amounts:
+                    closest_amount = min(amounts, key=lambda a: abs(a['position'] - (match_position - context_start)))
+                    special_item['amount_raw'] = closest_amount['raw']
+                    special_item['amount_value'] = closest_amount['value']
+                    special_item['amount_scale'] = closest_amount['scale']
+                else:
+                    special_item['amount_raw'] = None
+                    special_item['amount_value'] = None
+                    special_item['amount_scale'] = None
+
+                # Add footnote reference if found
+                if footnote_refs:
+                    closest_ref = min(footnote_refs, key=lambda r: abs(r['position'] - (match_position - context_start)))
+                    special_item['footnote_reference'] = closest_ref['raw']
+                    special_item['footnote_id'] = closest_ref['note_id']
+                else:
+                    special_item['footnote_reference'] = None
+                    special_item['footnote_id'] = None
+
+                # Add anchor hash for traceability
+                special_item['anchor_hash'] = hash(context[:100]) % 10**8  # 8-digit hash of context start
+
+                special_items.append(special_item)
+
+                if debug_logging:
+                    LOGGER.debug(
+                        f"Special item found: {category} | {keyword_matched} | "
+                        f"Confidence: {confidence:.2f} | Amount: {special_item.get('amount_raw', 'N/A')}"
+                    )
+
+        # Remove duplicates based on similar context (within 50 chars of each other)
+        deduplicated_items = []
+        special_items_sorted = sorted(special_items, key=lambda x: x.get('context', ''))
+
+        for item in special_items_sorted:
+            # Check if similar item already exists
+            is_duplicate = False
+            for existing in deduplicated_items:
+                # Consider duplicate if same type and context overlap significantly
+                if (item['type'] == existing['type'] and
+                    item.get('context', '')[:100] == existing.get('context', '')[:100]):
+                    is_duplicate = True
+                    # Merge keywords if duplicate
+                    existing['keywords_matched'] = list(set(existing['keywords_matched'] + item['keywords_matched']))
+                    # Take higher confidence
+                    existing['confidence'] = max(existing['confidence'], item['confidence'])
+                    break
+
+            if not is_duplicate:
+                deduplicated_items.append(item)
+
+        if debug_logging:
+            LOGGER.debug(f"Extracted {len(deduplicated_items)} special items (after deduplication)")
+
+        return deduplicated_items
+
     def get_10q_parts(
         self, text: str, filing_metadata: Dict[str, Any]
     ) -> Dict[str, str]:
@@ -991,9 +1248,26 @@ class ExtractItems:
             Any: The extracted JSON content
         """
 
+        # First try direct path (original behavior)
         absolute_filename = os.path.join(
             self.raw_files_folder, filing_metadata["Type"], filing_metadata["filename"]
         )
+
+        # If file doesn't exist, search in year subdirectories
+        if not os.path.exists(absolute_filename):
+            type_dir = os.path.join(self.raw_files_folder, filing_metadata["Type"])
+            found = False
+            # Walk through subdirectories to find the file
+            for root, dirs, files in os.walk(type_dir):
+                if filing_metadata["filename"] in files:
+                    absolute_filename = os.path.join(root, filing_metadata["filename"])
+                    found = True
+                    break
+
+            if not found:
+                raise FileNotFoundError(
+                    f"Could not find {filing_metadata['filename']} in {type_dir} or its subdirectories"
+                )
 
         # Read the content of the file
         with open(absolute_filename, "r", errors="backslashreplace") as file:
@@ -1045,12 +1319,23 @@ class ExtractItems:
         if filing_metadata["filename"].endswith("txt") and not documents:
             LOGGER.info(f'\nNo <DOCUMENT> tag for {filing_metadata["filename"]}')
 
+        # Detect span elements and handle them depending on span type
+        doc_report = self.handle_spans(doc_report, is_html=is_html)
+
+        # Extract special items BEFORE table removal to preserve context
+        # This is critical for capturing footnote references and table-based disclosures
+        special_items = []
+        if self.special_items_config.get('enabled', False):
+            special_items = self.extract_special_items(
+                doc_report=doc_report,
+                is_html=is_html,
+                filing_metadata=filing_metadata,
+                special_items_config=self.special_items_config
+            )
+
         # For non-HTML documents, clean all table items
         if self.remove_tables:
             doc_report = self.remove_html_tables(doc_report, is_html=is_html)
-
-        # Detect span elements and handle them depending on span type
-        doc_report = self.handle_spans(doc_report, is_html=is_html)
 
         # Prepare the JSON content with filing metadata
         json_content = {
@@ -1068,6 +1353,10 @@ class ExtractItems:
             "complete_text_filing_link": filing_metadata["complete_text_file_link"],
             "filename": filing_metadata["filename"],
         }
+
+        # Add special items to JSON output if extraction is enabled
+        if self.special_items_config.get('enabled', False):
+            json_content["special_items"] = special_items
 
         # Initialize item sections as empty strings in the JSON content
         # for item_index in self.items_to_extract:
@@ -1164,9 +1453,33 @@ class ExtractItems:
         self.determine_items_to_extract(filing_metadata)
 
         # Create the absolute path for the JSON file
-        absolute_json_filename = os.path.join(
-            self.extracted_files_folder, filing_metadata["Type"], json_filename
-        )
+        # Progressive reorganization: organize by year to avoid Drive limits
+        filing_type_folder = os.path.join(self.extracted_files_folder, filing_metadata["Type"])
+
+        # Extract year from filename and create year subfolder
+        year_match = re.search(r'_10K_(\d{4})_', json_filename)
+
+        if year_match:
+            year_subfolder = year_match.group(1)
+            year_folder = os.path.join(filing_type_folder, year_subfolder)
+            os.makedirs(year_folder, exist_ok=True)
+            absolute_json_filename = os.path.join(year_folder, json_filename)
+        else:
+            # Fallback: use root if year not found
+            absolute_json_filename = os.path.join(filing_type_folder, json_filename)
+
+        # Check if file exists in OLD location (root) - move it!
+        old_location = os.path.join(filing_type_folder, json_filename)
+        if year_match and os.path.exists(old_location) and old_location != absolute_json_filename:
+            try:
+                # Move from old location to year subfolder
+                os.rename(old_location, absolute_json_filename)
+                print(f"📦 Moved: {json_filename} → {year_subfolder}/")
+                if self.skip_extracted_filings:
+                    return 0  # Already extracted, just moved
+            except Exception as e:
+                # If move fails, continue with extraction
+                pass
 
         # Skip processing if the extracted JSON file already exists and skip flag is enabled
         if self.skip_extracted_filings and os.path.exists(absolute_json_filename):
@@ -1243,6 +1556,7 @@ def main() -> None:
         raw_files_folder=raw_filings_folder,
         extracted_files_folder=extracted_filings_folder,
         skip_extracted_filings=config["skip_extracted_filings"],
+        special_items_config=config.get("special_items", {"enabled": False}),
     )
 
     LOGGER.info(

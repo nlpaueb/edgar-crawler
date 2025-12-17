@@ -1,0 +1,62 @@
+BRANCH STRUCTURE AND MERGE PLAN
+================================
+
+Current State:
+--------------
+
+main (original)
+│
+├─── claude/add-download-functionality-011CUuZUGtr16XsT2Ann77oP (branch #3)
+│    │
+│    ├─ Has: Download manager functionality
+│    └─ Missing: Improved inventory display
+│
+└─── claude/fix-edgar-inventory-01VHYDnmaNQtFpWqjL8B6Bwq (branch #2)
+     │
+     ├─ Has: Download manager functionality
+     └─ Has: Improved inventory display ✅
+
+
+Goal: Merge branch #2 → branch #3
+-----------------------------------
+
+After merge:
+--------------
+
+main (original)
+│
+└─── claude/add-download-functionality-011CUuZUGtr16XsT2Ann77oP (branch #3) ← UPDATED!
+     │
+     ├─ Has: Download manager functionality
+     └─ Has: Improved inventory display ✅ (from branch #2)
+
+
+What You'll Get:
+----------------
+
+✅ _count_unique_filings() method
+✅ _get_accessions_recursive() helper
+✅ Enhanced RAW Filings display:
+   "10-K: 5,618 unique filings (85,019 total files, ~15.1 files/filing)"
+✅ Metadata vs Disk comparison section
+✅ Clear explanatory notes
+✅ example_inventory_output.txt
+
+
+How to Create the PR:
+----------------------
+
+Web Interface (Easiest):
+1. Go to: https://github.com/haowenluo/edgar-crawler
+2. Click "Pull requests" tab
+3. Click "New pull request"
+4. Set:
+   - Base: claude/add-download-functionality-011CUuZUGtr16XsT2Ann77oP
+   - Compare: claude/fix-edgar-inventory-01VHYDnmaNQtFpWqjL8B6Bwq
+5. Click "Create pull request"
+6. Review and merge!
+
+Command Line:
+1. git checkout claude/add-download-functionality-011CUuZUGtr16XsT2Ann77oP
+2. git merge claude/fix-edgar-inventory-01VHYDnmaNQtFpWqjL8B6Bwq
+3. git push origin claude/add-download-functionality-011CUuZUGtr16XsT2Ann77oP

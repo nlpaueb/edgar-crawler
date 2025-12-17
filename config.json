@@ -5,7 +5,7 @@
 		"quarters": [1, 2, 3, 4],
 		"filing_types": ["10-K", "10-Q", "8-K"],
 		"cik_tickers": ["AAPL"],
-		"user_agent": "Your name (your email)",
+		"user_agent": "REPLACE_WITH_YOUR_NAME_AND_EMAIL",
 		"raw_filings_folder": "RAW_FILINGS",
 		"indices_folder": "INDICES",
 		"filings_metadata_file": "FILINGS_METADATA.csv",
@@ -19,6 +19,22 @@
 		"include_signature": false,
 		"items_to_extract": [],
 		"remove_tables": true,
-		"skip_extracted_filings": true
+		"skip_extracted_filings": true,
+		"special_items": {
+			"enabled": true,
+			"scan_item_7_mda": false,
+			"confidence_threshold": 0.3,
+			"debug_logging": false,
+			"keywords": {
+				"restructuring": ["restructuring", "reorganization", "workforce reduction", "severance", "facility closure"],
+				"impairment": ["impairment", "write-down", "write-off", "write down", "write off", "goodwill impairment", "asset impairment"],
+				"litigation": ["litigation", "settlement", "legal proceeding", "legal settlement", "jury award", "arbitration"],
+				"discontinued_ops": ["discontinued operation", "disposal of business", "disposal group", "held for sale"],
+				"acquisition": ["acquisition", "merger", "business combination", "transaction costs", "integration costs", "deal costs", "M&A", "acquisition-related", "merger-related", "earnout", "purchase price adjustment", "advisory fees"],
+				"asset_sale": ["gain on sale", "loss on sale", "asset disposal", "divestiture", "sale of assets", "disposal proceeds", "gain on disposal", "loss on disposal"],
+				"unusual": ["unusual item", "nonrecurring", "non-recurring", "one-time", "special charge", "special item", "items impacting comparability", "non-gaap adjustment", "non-operating"],
+				"other": ["other income", "other expense", "debt extinguishment", "pension settlement", "foreign exchange", "early retirement"]
+			}
+		}
 	}
 }

@@ -1,0 +1,9 @@
+{
+  "description": "Extract MD&A (Item 7) from 10-K filings only",
+  "items_to_extract": ["7"],
+  "filing_types": ["10-K"],
+  "output_dir": "Item_7_MDA",
+  "remove_tables": true,
+  "skip_existing": true,
+  "include_signature": false
+}

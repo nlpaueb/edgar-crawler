@@ -1,0 +1,13 @@
+{
+  "description": "Extract MD&A from 10-Q quarterly filings (Part I, Item 2)",
+  "items_to_extract": ["part_1__2"],
+  "filing_types": ["10-Q"],
+  "output_dir": "10Q_Item_Part1_2_MDA",
+  "remove_tables": true,
+  "skip_existing": true,
+  "include_signature": false,
+  "notes": [
+    "Part I, Item 2 contains quarterly MD&A",
+    "This provides 4x more data points per firm per year compared to 10-K"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "description": "Extract Business (Item 1) and Risk Factors (Item 1A) from 10-K filings",
+  "items_to_extract": ["1", "1A"],
+  "filing_types": ["10-K"],
+  "output_dir": "item_1_1a",
+  "remove_tables": true,
+  "skip_existing": true,
+  "include_signature": false
+}

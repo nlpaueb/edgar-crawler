@@ -1,0 +1,15 @@
+{
+  "description": "Extract multiple key items from 10-K filings for comprehensive analysis",
+  "items_to_extract": ["1", "1A", "7", "7A"],
+  "filing_types": ["10-K"],
+  "output_dir": "Multi_Items",
+  "remove_tables": true,
+  "skip_existing": true,
+  "include_signature": false,
+  "notes": [
+    "Item 1: Business Description",
+    "Item 1A: Risk Factors",
+    "Item 7: MD&A",
+    "Item 7A: Market Risk Disclosures"
+  ]
+}

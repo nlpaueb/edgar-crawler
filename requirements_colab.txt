@@ -1,0 +1,18 @@
+# WRDS-EDGAR Extraction Requirements for Google Colab
+# Install with: pip install -r requirements_colab.txt
+
+# WRDS connection
+wrds>=1.1.0
+
+# Existing edgar-crawler dependencies
+beautifulsoup4>=4.9.0
+lxml>=4.6.0
+requests>=2.25.0
+pandas>=1.2.0
+tqdm>=4.50.0
+pathos>=0.2.7
+cssutils>=2.3.0
+click>=7.1.0
+
+# Additional utilities
+numpy>=1.19.0

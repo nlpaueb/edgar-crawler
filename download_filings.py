@@ -719,13 +719,19 @@ def crawl(
                 accession_num = os.path.splitext(
                     os.path.basename(series["complete_text_file_link"])
                 )[0]
-                filename = f"{str(series['CIK'])}_{filing_type_name}_{period_of_report[:4]}_{accession_num}.{file_extension}"
+                year = period_of_report[:4]  # Extract year from period_of_report
+                filename = f"{str(series['CIK'])}_{filing_type_name}_{year}_{accession_num}.{file_extension}"
+
+                # Create year-based subdirectory to avoid too many files in one folder
+                # This prevents Google Drive issues with large directories
+                year_folder = os.path.join(raw_filings_folder, filing_type, year)
+                os.makedirs(year_folder, exist_ok=True)
 
                 # Download the file
                 success = download(
                     url=link_to_download,
                     filename=filename,
-                    download_folder=os.path.join(raw_filings_folder, filing_type),
+                    download_folder=year_folder,
                     user_agent=user_agent,
                 )
                 if success:

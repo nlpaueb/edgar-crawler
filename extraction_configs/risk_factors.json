@@ -1,0 +1,9 @@
+{
+  "description": "Extract Risk Factors (Item 1A) from 10-K filings",
+  "items_to_extract": ["1A"],
+  "filing_types": ["10-K"],
+  "output_dir": "Item_1A_Risk",
+  "remove_tables": false,
+  "skip_existing": true,
+  "include_signature": false
+}
